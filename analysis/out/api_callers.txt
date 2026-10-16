@@ -1,0 +1,4 @@
+BitBlt (1)
+  00727018
+GetSystemMetrics (1)
+  00727220

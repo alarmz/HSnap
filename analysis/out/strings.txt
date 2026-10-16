@@ -1,0 +1,1980 @@
+00621f20	WININET.dll
+00621f38	CLSID\{ADB880A6-D8FF-11CF-9377-00AA003B7A11}\InprocServer32
+00621f74	 unzip 0.20 Copyright 1998-2002 Gilles Vollant - http://www.winimage.com/zLibDll
+00622018	 inflate 1.1.3 Copyright 1995-1998 Mark Adler 
+00622c98	abcdefgh
+00623ef4	invalid vector<T> subscript
+00623f10	list<T> too long
+00623f2f	@This program cannot be run in DOS mode
+00623f58	IS 3.0.20.0
+00623f76	V@deque<T> too long
+00623f98	DIBToHBITMAP error: GetLatError = %d
+00623fc0	bad allocation
+00623fd8	bad allocation
+00623fe8	LibTiff 3.5.7a
+00623ff8	bad allocation
+0062401f	@bad allocation
+0062415f	?bad allocation
+00624170	bad allocation
+00624180	%d, %d\n
+006241b8	bad allocation
+006241c8	Possible bad Perlin object
+006241e4	Possible bad Perlin object
+00624200	Possible bad Perlin object
+00624250	LibJasPer 1.6001
+006242a4	Unable to read component matrix
+006242c4	Unable to allocate component matrix
+006242e8	Invalid component specificiations
+0062430c	Invalid colorspace
+00624320	Unable to write J2K image
+00624364	vcausal\n
+00624380	mode=int\n
+0062438c	mode=real\n
+006243bc	Unable to allocate memory
+006243d8	Unable to to create J2K image
+0062487f	-HsSizer6.dll
+00624890	dwmapi.dll
+006248b8	AfxControlBar80s
+006248cc	AfxMDIFrame80s
+006248dc	AfxFrameOrView80s
+006248f0	AfxOleControl80s
+00624904	AfxOldWndProc423
+0062493c	EnumDisplayDevicesA
+00624950	GetMonitorInfoA
+00624960	EnumDisplayMonitors
+00624974	MonitorFromPoint
+00624988	MonitorFromRect
+00624998	MonitorFromWindow
+006249ac	GetSystemMetrics
+006249c0	USER32
+006249c8	accParent
+006249dc	accChildCount
+006249f8	accChild
+00624a0c	accName
+00624a1c	accValue
+00624a30	accDescription
+00624a50	accRole
+00624a60	accState
+00624a74	accHelp
+00624a84	accHelpTopic
+00624aa0	accKeyboardShortcut
+00624ac8	accFocus
+00624adc	accSelection
+00624af8	accDefaultAction
+00624b1c	accSelect
+00624b30	accLocation
+00624b48	accNavigate
+00624b60	accHitTest
+00624b78	accDoDefaultAction
+00624da4	InitCommonControls
+00624db8	InitCommonControlsEx
+00624dd0	HtmlHelpA
+006251f0	commctrl_DragListMsg
+00625208	COleException
+00625250	CDialog
+006254a8	MS Shell Dlg
+006254b8	CInvalidArgException
+006254d0	CNotSupportedException
+006254e8	CMemoryException
+006254fc	CException
+006255e4	CCmdTarget
+006256e8	CRichEditCtrl
+006256f8	CImageList
+00625704	CListCtrl
+00625710	CHeaderCtrl
+0062571c	CSliderCtrl
+00625728	CSpinButtonCtrl
+006257e4	ToolbarWindow32
+006257f4	msctls_statusbar32
+00625944	msctls_updown32
+00625a98	msctls_trackbar32
+00625e90	ImageList_Create
+00625ea4	ImageList_Destroy
+00625eb8	ImageList_LoadImageA
+00625f08	f:\sp\vctools\vc7libs\ship\atlmfc\src\mfc\winctrl2.cpp
+00625fac	CWinThread
+00626058	DeactivateActCtx
+0062606c	ActivateActCtx
+0062607c	ReleaseActCtx
+0062608c	CreateActCtxW
+0062609c	KERNEL32
+006260d0	comctl32.dll
+006260e8	comdlg32.dll
+00626100	CPropertySheet
+00626110	CPropertyPage
+00626120	AfxClosePending
+006261b0	CreatePropertySheetPageA
+006261cc	DestroyPropertySheetPage
+006261e8	PropertySheetA
+006265a8	CScrollBar
+006265b4	CEdit
+006265bc	CComboBox
+006265c8	CListBox
+006265d4	CButton
+006265dc	CStatic
+0062668c	STATIC
+006267d8	BUTTON
+00626a7c	COMBOBOX
+00626d18	SCROLLBAR
+00626e70	CFileDialog
+00626e98	GetOpenFileNameA
+00626eac	GetSaveFileNameA
+0062703c	CControlBar
+00627050	CFrameWnd
+00627270	f:\sp\vctools\vc7libs\ship\atlmfc\src\mfc\winfrm.cpp
+006272c8	ReBarWindow32
+00627768	MSWHEEL_ROLLMSG
+00627778	CMDIChildWnd
+00627788	CMDIFrameWnd
+00627ad0	mdiclient
+00627d80	CPalette
+00627d8c	CBitmap
+00627d94	CFont
+00627dac	CGdiObject
+00627db8	CPaintDC
+00627dc4	CWindowDC
+00627dd0	CClientDC
+00627de0	CUserException
+00627df0	CResourceException
+00627f70	GetLayout
+00627f7c	GDI32.DLL
+00627f88	SetLayout
+0062822c	DragDelay
+00628238	windows
+00628240	DragMinDist
+006282e8	DragScrollInterval
+006282fc	DragScrollDelay
+0062830c	windows
+00628314	DragScrollInset
+00628398	f:\sp\vctools\vc7libs\ship\atlmfc\src\mfc\oledrop2.cpp
+00628518	CWinApp
+00628520	Recent File List
+0062853c	Settings
+00628548	PreviewPages
+006285e0	CreateActCtxA
+006285f0	Software\Microsoft\Windows\CurrentVersion\Policies\Explorer
+0062862c	NoRun
+00628634	NoDrives
+00628640	RestrictRun
+0062864c	NoNetConnectDisconnect
+00628664	NoRecentDocsHistory
+00628678	Software\Microsoft\Windows\CurrentVersion\Policies\Network
+006286b4	NoEntireNetwork
+006286c4	Software\Microsoft\Windows\CurrentVersion\Policies\Comdlg32
+00628700	NoBackButton
+00628710	NoFileMru
+00628720	Automation
+0062872c	Embedding
+0062873c	Unregserver
+00628748	Unregister
+00628754	Regserver
+00628760	Register
+00628774	ntdll.dll
+00628784	Control Panel\Desktop\ResourceLocale
+006287ac	GetSystemDefaultUILanguage
+006287c8	GetUserDefaultUILanguage
+006287e4	kernel32.dll
+006287f4	%s%s.dll
+006288d0	f:\sp\vctools\vc7libs\ship\atlmfc\src\mfc\appcore.cpp
+00628908	CPageSetupDialog
+0062891c	CPrintDialog
+00628c6c	PrintDlgA
+00628c78	PageSetupDlgA
+00628c88	CommDlgExtendedError
+00628d10	COleObjectFactory
+00628df8	f:\sp\vctools\vc7libs\ship\atlmfc\src\mfc\olefact.cpp
+00628e3c	RichEdit Text and Objects
+00628e58	FileNameW
+00628e64	Link Source Descriptor
+00628e7c	Object Descriptor
+00628e90	Link Source
+00628e9c	Embed Source
+00628eac	Embedded Object
+00628ebc	ObjectLink
+00628ec8	OwnerLink
+00628ed4	Native
+00628f3c	software
+00628f50	RICHED32.DLL
+00628f60	RICHED20.DLL
+00628f70	RichEdit20A
+00628f7c	CDocument
+00629010	ReplaceFileA
+00629098	CDocTemplate
+006290c4	COleDispatchException
+0062925c	MAPI32.DLL
+0062926c	MAPISendMail
+0062927c	CMultiDocTemplate
+006294a8	CPreviewView
+00629858	CSplitterWnd
+006299b0	f:\sp\vctools\vc7libs\ship\atlmfc\src\mfc\viewcore.cpp
+006299e8	CStatusBar
+00629ebc	CDockState
+00629ec8	Visible
+00629ed0	%s-Bar%d
+00629edc	%s-Summary
+00629f04	Docking
+00629f0c	MRUDockID
+00629f18	MRUDockLeftPos
+00629f28	MRUDockRightPos
+00629f38	MRUDockTopPos
+00629f48	MRUDockBottomPos
+00629f5c	MRUFloatStyle
+00629f6c	MRUFloatXPos
+00629f7c	MRUFloatYPos
+00629f8c	BarID
+00629f9c	Floating
+00629fb0	ScreenCX
+00629fbc	ScreenCY
+00629fe0	CStringArray
+0062a000	f:\sp\vctools\vc7libs\ship\atlmfc\src\mfc\array_s.cpp
+0062a038	CArchiveException
+0062a084	CDialogBar
+0062a25c	CMiniDockFrameWnd
+0062a270	CDockBar
+0062a6d0	CToolBar
+0062a8a4	DllGetVersion
+0062aa40	CColorDialog
+0062aa74	ChooseColorA
+0062abec	CMapPtrToPtr
+0062ac78	commdlg_SetRGBColor
+0062ac8c	commdlg_help
+0062ac9c	commdlg_ColorOK
+0062acac	commdlg_FileNameOK
+0062acc0	commdlg_ShareViolation
+0062acd8	commdlg_LBSelChangedNotify
+0062acf4	CFontDialog
+0062ae9c	COleDocument
+0062aeac	CDocItem
+0062af30	CMemFile
+0062afe0	CByteArray
+0062affc	CWordArray
+0062b030	CReBar
+0062b054	CMiniFrameWnd
+0062b2c8	f:\sp\vctools\vc7libs\ship\atlmfc\src\mfc\auxdata.cpp
+0062b300	CSharedFile
+0062b394	CToolTipCtrl
+0062b588	CPtrArray
+0062b5d0	f:\sp\vctools\vc7libs\ship\atlmfc\src\mfc\dockcont.cpp
+0062b608	COleIPFrameWnd
+0062b910	combobox
+0062b91c	CFile
+0062b9c0	InProcServer32
+0062b9d0	f:\sp\vctools\vc7libs\ship\atlmfc\src\mfc\filecore.cpp
+0062ba08	{%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}
+0062ba3c	DllGetClassObject
+0062ba6c	CSyncObject
+0062ba78	CCriticalSection
+0062bac4	CCheckListBox
+0062baf8	IsAppThemed
+0062bb04	GetThemePartSize
+0062bb18	Button
+0062bc98	COleDocIPFrameWnd
+0062be80	CUIntArray
+0062bec0	CObArray
+0062c01c	windows
+0062c024	oleinplaceborderwidth
+0062c03c	CPtrList
+0062c074	CMutex
+0062c0b4	CFileException
+0062c0e0	MFCM80ReleaseManagedReferences
+0062c114	System
+0062c198	MS UI Gothic
+0062c1a8	KERNEL32.DLL
+0062c1b8	COleStreamFile
+0062c1e4	f:\sp\vctools\vc7libs\ship\atlmfc\src\mfc\olestrm.cpp
+0062c348	CDocManager
+0062c354	%s\shell\open\%s
+0062c368	%s\shell\print\%s
+0062c37c	%s\shell\printto\%s
+0062c390	%s\DefaultIcon
+0062c3a0	%s\ShellNew
+0062c3b0	command
+0062c438	NullFile
+0062c63c	[printto("
+0062c664	%2\CLSID
+0062c670	%2\Insertable
+0062c680	%2\protocol\StdFileEditing\verb\0
+0062c6a8	%2\protocol\StdFileEditing\server
+0062c6d0	CLSID\%1
+0062c6dc	CLSID\%1\ProgID
+0062c6f0	CLSID\%1\InprocHandler32
+0062c709	ole32.dll
+0062c714	CLSID\%1\LocalServer32
+0062c730	CLSID\%1\Verb\0
+0062c74c	CLSID\%1\Verb\1
+0062c768	CLSID\%1\Insertable
+0062c780	CLSID\%1\AuxUserType\2
+0062c79c	CLSID\%1\AuxUserType\3
+0062c7b8	CLSID\%1\DefaultIcon
+0062c7d4	CLSID\%1\MiscStatus
+0062c7ec	CLSID\%1\InProcServer32
+0062c808	CLSID\%1\DocObject
+0062c820	%2\DocObject
+0062c830	CLSID\%1\Printable
+0062c844	CLSID\%1\DefaultExtension
+0062c9ec	ThreadingModel
+0062c9fc	InprocServer32
+0062ca0c	Insertable
+0062d0b4	commdlg_FindReplace
+0062d0e0	NotifyWinEvent
+0062d0f0	CScrollView
+0062d128	Magellan MSWHEEL
+0062d13c	MSH_SCROLL_LINES_MSG
+0062d41c	MSH_WHEELSUPPORT_MSG
+0062d520	COleServerDoc
+0062d54c	CPreviewDC
+0062d5f8	CMapStringToPtr
+0062d634	COleLinkingDoc
+0062d660	COleBusyDialog
+0062d670	COleDialog
+0062d820	CorExitProcess
+0062d830	mscoree.dll
+0062d898	SetThreadStackGuarantee
+0062e0c4	Unknown exception
+0062e178	Microsoft Visual C++ Runtime Library
+0062e1c8	(Press Retry to debug the application - JIT must be enabled)
+0062e248	For information on how your program can cause an assertion\nfailure, see the Visual C++ documentation on asserts
+0062e328	Expression: 
+0062e344	Line: 
+0062e354	File: 
+0062e364	<program name unknown>
+0062e394	Program: 
+0062e3a8	Assertion failed!
+0062e3cc	Filename cannot be displayed on Win9x
+0062e3f4	Expression cannot be displayed on Win9x
+0062e420	LC_TIME
+0062e428	LC_NUMERIC
+0062e434	LC_MONETARY
+0062e440	LC_CTYPE
+0062e44c	LC_COLLATE
+0062e458	LC_ALL
+0062e53c	EncodePointer
+0062e54c	DecodePointer
+0062e55c	FlsFree
+0062e564	FlsSetValue
+0062e570	FlsGetValue
+0062e57c	FlsAlloc
+0062e618	UTF-16LE
+0062e624	UNICODE
+0062e68c	runtime error 
+0062e69c	TLOSS error\r\n
+0062e6ac	SING error\r\n
+0062e6bc	DOMAIN error\r\n
+0062e6d0	R6034\r\nAn application has made an attempt to load the C runtime library incorrectly.\nPlease contact the application's support team for more information.\r\n
+0062e770	R6033\r\n- Attempt to use MSIL code from this assembly during native code initialization\nThis indicates a bug in your application. It is most likely the result of calling an MSIL-compiled (/clr) function from a native constructor or from DllMain.\r\n
+0062e868	R6032\r\n- not enough space for locale information\r\n
+0062e8a0	R6031\r\n- Attempt to initialize the CRT more than once.\nThis indicates a bug in your application.\r\n
+0062e904	R6030\r\n- CRT not initialized\r\n
+0062e924	R6028\r\n- unable to initialize heap\r\n
+0062e94c	R6027\r\n- not enough space for lowio initialization\r\n
+0062e984	R6026\r\n- not enough space for stdio initialization\r\n
+0062e9bc	R6025\r\n- pure virtual function call\r\n
+0062e9e4	R6024\r\n- not enough space for _onexit/atexit table\r\n
+0062ea1c	R6019\r\n- unable to open console device\r\n
+0062ea48	R6018\r\n- unexpected heap error\r\n
+0062ea6c	R6017\r\n- unexpected multithread lock error\r\n
+0062ea9c	R6016\r\n- not enough space for thread data\r\n
+0062eac8	\r\nThis application has requested the Runtime to terminate it in an unusual way.\nPlease contact the application's support team for more information.\r\n
+0062eb60	R6009\r\n- not enough space for environment\r\n
+0062eb8c	R6008\r\n- not enough space for arguments\r\n
+0062ebb8	R6002\r\n- floating point support not loaded\r\n
+0062ebe8	Microsoft Visual C++ Runtime Library
+0062ec10	<program name unknown>
+0062ec28	Runtime Error!\n\nProgram: 
+0062ec44	InitializeCriticalSectionAndSpinCount
+0062ec70	SunMonTueWedThuFriSat
+0062ec88	JanFebMarAprMayJunJulAugSepOctNovDec
+0062ed44	floor
+0062ed98	bad exception
+0062edbe	GAIsProcessorFeaturePresent
+0063179f	7_nextafter
+00635bae	.=GetProcessWindowStation
+00635bc8	GetUserObjectInformationW
+00635be4	GetLastActivePopup
+00635bf8	GetActiveWindow
+00635c08	MessageBoxW
+00635c2c	(Press Retry to debug the application - JIT must be enabled)
+00635c70	For information on how your program can cause an assertion\nfailure, see the Visual C++ documentation on asserts
+00635ce0	Expression: 
+00635cf0	Line: 
+00635cf8	File: 
+00635d00	Program: 
+00635d0c	Assertion failed!
+00635d2c	dddd, MMMM dd, yyyy
+00635d54	December
+00635d60	November
+00635d6c	October
+00635d74	September
+00635d80	August
+00635d98	April
+00635da0	March
+00635da8	February
+00635dec	Saturday
+00635df8	Friday
+00635e00	Thursday
+00635e0c	Wednesday
+00635e18	Tuesday
+00635e20	Monday
+00635e28	Sunday
+00635e4c	united-states
+00635e5c	united-kingdom
+00635e6c	trinidad & tobago
+00635e80	south-korea
+00635e8c	south-africa
+00635e9c	south korea
+00635ea8	south africa
+00635eb8	slovak
+00635ec0	puerto-rico
+00635ecc	pr-china
+00635ed8	pr china
+00635ee8	new-zealand
+00635ef4	hong-kong
+00635f00	holland
+00635f08	great britain
+00635f18	england
+00635f20	czech
+00635f28	china
+00635f30	britain
+00635f38	america
+00635f4c	swiss
+00635f54	swedish-finland
+00635f64	spanish-venezuela
+00635f78	spanish-uruguay
+00635f88	spanish-puerto rico
+00635f9c	spanish-peru
+00635fac	spanish-paraguay
+00635fc0	spanish-panama
+00635fd0	spanish-nicaragua
+00635fe4	spanish-modern
+00635ff4	spanish-mexican
+00636004	spanish-honduras
+00636018	spanish-guatemala
+0063602c	spanish-el salvador
+00636040	spanish-ecuador
+00636050	spanish-dominican republic
+0063606c	spanish-costa rica
+00636080	spanish-colombia
+00636094	spanish-chile
+006360a4	spanish-bolivia
+006360b4	spanish-argentina
+006360c8	portuguese-brazilian
+006360e0	norwegian-nynorsk
+006360f4	norwegian-bokmal
+00636108	norwegian
+00636114	italian-swiss
+00636124	irish-english
+00636134	german-swiss
+00636144	german-luxembourg
+00636158	german-lichtenstein
+0063616c	german-austrian
+0063617c	french-swiss
+0063618c	french-luxembourg
+006361a0	french-canadian
+006361b0	french-belgian
+006361c0	english-usa
+006361cc	english-us
+006361d8	english-uk
+006361e4	english-trinidad y tobago
+00636200	english-south africa
+00636218	english-nz
+00636224	english-jamaica
+00636234	english-ire
+00636240	english-caribbean
+00636254	english-can
+00636260	english-belize
+00636270	english-aus
+0063627c	english-american
+00636290	dutch-belgian
+006362a0	chinese-traditional
+006362b4	chinese-singapore
+006362c8	chinese-simplified
+006362dc	chinese-hongkong
+006362f0	chinese
+00636300	canadian
+0063630c	belgian
+00636314	australian
+00636320	american-english
+00636334	american english
+00636348	american
+00636634	Norwegian-Nynorsk
+00636648	 Complete Object Locator'
+00636664	 Class Hierarchy Descriptor'
+00636684	 Base Class Array'
+00636698	 Base Class Descriptor at (
+006366b4	 Type Descriptor'
+006366c8	`local static thread guard'
+006366e4	`managed vector copy constructor iterator'
+00636710	`vector vbase copy constructor iterator'
+0063673c	`vector copy constructor iterator'
+00636760	`dynamic atexit destructor for '
+00636784	`dynamic initializer for '
+006367a0	`eh vector vbase copy constructor iterator'
+006367cc	`eh vector copy constructor iterator'
+006367f4	`managed vector destructor iterator'
+0063681c	`managed vector constructor iterator'
+00636844	`placement delete[] closure'
+00636864	`placement delete closure'
+00636880	`omni callsig'
+00636890	 delete[]
+0063689c	 new[]
+006368a4	`local vftable constructor closure'
+006368c8	`local vftable'
+006368d8	`RTTI
+006368e4	`udt returning'
+006368f4	`copy constructor closure'
+00636910	`eh vector vbase constructor iterator'
+00636938	`eh vector destructor iterator'
+00636958	`eh vector constructor iterator'
+0063697c	`virtual displacement map'
+00636998	`vector vbase constructor iterator'
+006369bc	`vector destructor iterator'
+006369dc	`vector constructor iterator'
+006369fc	`scalar deleting destructor'
+00636a1c	`default constructor closure'
+00636a3c	`vector deleting destructor'
+00636a5c	`vbase destructor'
+00636a70	`string'
+00636a7c	`local static guard'
+00636a94	`typeof'
+00636aa0	`vcall'
+00636aa8	`vbtable'
+00636ab4	`vftable'
+00636b14	operator
+00636b38	 delete
+00636b48	__unaligned
+00636b54	__restrict
+00636b60	__ptr64
+00636b68	__clrcall
+00636b74	__fastcall
+00636b80	__thiscall
+00636b8c	__stdcall
+00636b98	__pascal
+00636ba4	__cdecl
+00636bac	__based(
+00636d90	`non-type-template-parameter
+00636db0	unsigned 
+00636dbc	long 
+00636dcc	short 
+00636dd4	char 
+00636de4	<ellipsis>
+00636df0	,<ellipsis>
+00636e14	`template-parameter
+00636e30	cli::pin_ptr<
+00636e40	cli::array<
+00636e58	`anonymous namespace'
+00636e74	generic-type-
+00636e84	template-parameter-
+00636e9c	`unknown ecsu'
+00636eac	union 
+00636eb4	struct 
+00636ebc	class 
+00636ec4	enum 
+00636ecc	coclass 
+00636ed8	cointerface 
+00636eec	extern "C" 
+00636f04	public: 
+00636f10	protected: 
+00636f1c	private: 
+00636f28	virtual 
+00636f34	static 
+00636f3c	`template static data member destructor helper'
+00636f6c	`template static data member constructor helper'
+00636fa0	`local static destructor helper'
+00636fc4	`adjustor{
+00636fd0	`vtordisp{
+00636fdc	`vtordispex{
+00636ff4	const 
+00636ffc	volatile 
+00637010	volatile
+0063701c	 volatile
+00637028	const
+00637030	signed 
+00637038	double
+00637050	UNKNOWN
+00637058	__int128
+00637064	__int32
+0063706c	__int64
+00637074	__int16
+0063708c	float
+006370a0	short
+006370b0	GetUserObjectInformationA
+006370cc	MessageBoxA
+006370d8	USER32.DLL
+006388f7	<CONOUT$
+006391d0	urlmon.dll
+00639c0c	InterlockedPopEntrySList
+00639c28	InterlockedPushEntrySList
+00639c44	string too long
+00639d90	gdiplus.dll
+00639da0	OLEACC.dll
+0063cf24	PointerToPrimeSelector
+0063cf88	GenuineIntel
+0063d0d8	Integer: division by zero
+0063d100	Integer: no integer satisfies the given parameters
+0063d140	BufferedTransformation: this object is not attachable
+0063d184	BER decode error
+0063d278	MontgomeryRepresentation: Montgomery representation requires an odd modulus
+0063d500	Integer: Min must be no greater than Max
+0063d52c	Integer: invalid EquivalentTo and/or Mod argument
+0063d560	Integer: invalid RandomNumberType argument
+0063d594	RandomNumberType
+0063d5ac	EquivalentTo
+0063d5bc	Integer: missing Max argument
+0063d5dc	BitLength
+0063d658	Cryptographic algorithms are disabled after a power-up self test failed.
+0063d6a8	Cryptographic algorithms are disabled before the power-up self tests are performed.
+0063d6fc	 bytes
+0063d704	 byte digest to 
+0063d718	HashTransformation: can't truncate a 
+0063d778	BufferedTransformation: this object doesn't support multiple channels
+0063d884	BitBucket
+0063d8c0	NullRNG: NullRNG should only be passed to functions that don't need to generate random bytes
+0063d954	Modulus
+0063d95c	SubgroupOrder
+0063d96c	SubgroupGenerator
+0063da84	SubgroupOrderSize
+0063db1c	DSA: not a valid prime length
+0063dfd0	Separator
+0063dfdc	Terminator
+0063dfe8	GroupSize
+0063dff8	PaddingByte
+0063e004	EncodingLookupArray
+0063e018	: missing required parameter '
+0063e038	BaseN_Encoder: Log2Base must be between 1 and 7 inclusive
+0063e074	BaseN_Encoder
+0063e084	BaseN_Decoder: Log2Base must be between 1 and 7 inclusive
+0063e0c0	BaseN_Decoder
+0063e566	DlPutMessage
+0063e574	OutputBuffer
+0063e644	ArraySink: missing OutputBuffer argument
+0063e67c	: Nonblocking input is not implemented by this object.
+0063e7bc	FilterWithBufferedInput: invalid buffer size
+0063e8dc	StringStore: missing InputBuffer argument
+0063ea98	ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
+0063eda8	NodeSize
+0063ee7f	@vector<bool> too long
+0063ef40	0123456789ABCDEF
+0063ef54	0123456789abcdef
+006400e7	? deflate 1.1.4 Copyright 1995-2002 Jean-loup Gailly 
+00640de8	::/html/bw_color.html
+00640e00	bAutoApply
+00640e0c	BlackWhite
+00640f7c	CCapSetBtPage
+0064120c	CCapSetCpPage
+00641300	CabinetWClass
+00641310	ExploreWClass
+00641320	ConsoleWindowClass
+00641334	Progman
+006414cc	CCapSetCsPage
+006416b8	QCropScale
+006416c4	QScale
+006416cc	QScaleInterpol
+006416dc	QScaleAspect
+006416ec	QCropHeight
+006416f8	QCropLeft
+00641704	QCropTop
+00641710	QCropWidth
+0064171c	QScaleHeight
+0064172c	QScaleWidth
+006418d4	CCapSetGbPage
+00641c14	CCapSetPropSheet
+00641cc8	html/Quicksave_tab.html
+00641ce0	html/Copy_print_tab.html
+00641cfc	html/View_edit_tab.html
+00641d14	html/Crop_scale_tab.html
+00641d30	html/TextSnap_tab.html
+00641d48	html/Button_tab.html
+00641d60	html/Region_tab.html
+00641d78	html/Capture_tab.html
+00641ee0	CCapSetQsPage
+00642078	ContOnError
+00642084	QuickSave
+00642090	FileName
+0064209c	FTPName
+006420a4	UploadFTP
+006420b0	IncFileName
+006420c4	PromptForName
+006420d4	Increment
+006420e0	StartNo
+006420f0	SnapNaming
+006422b4	CCapSetRgPage
+0064252c	CCapSetTxPage
+006427bc	CCapSetVePage
+00642a7c	CChildFrame
+00642e74	::/html/colorcorrect_color.html
+006432b8	::/html/colorres_color.html
+00643438	nColSub
+00643440	ColorSubst
+0064344c	ColSub
+00643454	Tolerance
+006436a8	; HyperSnap color substitution table\n
+006436d0	Num Colors = %d\n
+006436e4	; Hex: CR Old, CR New, BOOL Swap\n
+00643708	%06X, %06X, %d\n
+0064371c	Num Colors = 
+0064372c	%X, %X, %d
+00643738	::/html/sub_colors_color.html
+00643980	BitsPerPixel
+00643990	CopyOpts
+0064399c	BmpFormat
+006439a8	AutoSelect
+006439b4	MinOnCopy
+006439c0	::/html/edit_copy_format.html
+00643b40	ddraw.dll
+00643b4c	DirectDrawCreateEx
+00643b60	dxsnap.dll
+00643b6c	InstallSysMsgHook
+00643b80	ReleaseSysMsgHook
+00643b94	ActivateCapture
+00643ba4	glide2x.dll
+00643bb0	glide3x.dll
+00643ce8	bEnableDX
+00643cf4	SpecialCapture
+00643d04	EnableDXOV
+00643d10	EnableGlide
+00643d1c	DXCardType
+00643d28	DXGammaCorrect
+00643d38	DXPostProcess
+00643d48	OvlFormat
+00643d54	::/html/special_capture.html
+00643f40	Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts
+00643f7c	Application
+00643f88	HprSnapOld
+00643f94	\shell\open\command
+00643fa8	Applications\
+00644020	" -onewin "%%1"
+00644034	::/html/reg_file_options.html
+006442f8	FrameState
+00644304	Frame
+0064430c	Color
+00644314	HiColor
+0064431c	ShColor
+0064432c	::/html/frame_image_menu.html
+00644578	::/html/conhotkeys_options.html
+00644820	::/html/TextSnap_hotkeys.html
+006449b4	CHprColourPicker
+006449e4	HS_Transp_Info
+00644aa8	ArrowLen
+00644abc	ArrowWidth
+00644ac8	ArrowStyle
+00644ad4	ArrowHeadEnd
+00644ae4	HiliteColor
+00644af0	PenWidth
+00644afc	LineStyle
+00644b08	LineSmooth
+00644b14	EraserWidth
+00644b24	SameCol
+00644b2c	PenColor
+00644b38	FillColor
+00644b4c	HS6ClipImage_
+00644b60	Version:0.9\nStartHTML:%04d\nEndHTML:%04d\nStartFragment:%04d\nEndFragment:%04d\n<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">\n<HTML>\n<BODY>\n<!--StartFragment-->\n
+00644c10	<img border="0" src="file:///%s" width="%d" height="%d">\n<!--EndFragment-->\n</BODY>\n</HTML>
+00644c6c	<!--EndFragment
+00644c7c	<img border=
+00644c8c	<!DOCTYPE
+00644c98	HTML Format
+00645078	TextAr
+00645080	TextAs
+00645098	RegScroll
+006450a4	Cursor
+006450b8	Hyper
+006450c0	Repeat
+006450c8	PanReg
+006450d0	MultiReg
+006450e4	CliAct
+006450ec	WinAct
+006450f4	Region
+006450fc	Button
+00645104	Scroll
+00645118	Desktop
+00645120	Hyperionics.HyperSnap-DX.v4
+00645208	http://www.hyperionics.com/hsdx/crack.asp?sn=
+00645240	HomePage.url
+00645250	URL=http://
+0064526c	http://www.hyperionics.com/hsdx/RegScript.asp
+0064529c	http://www.hyperionics.com/hsdx/RegScript.asp?sn=
+006452d0	http://www.hyperionics.com/vers/hsdx6
+00645300	Hyperionics
+00645310	HyperSnap 6
+00645320	COXInstanceManager_InstanceList_Mutex_
+00645348	COXInstanceManager_Additional_Mutex_
+00645398	ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/-
+006453dc	Separator Width
+006453ec	ToolBar State(0x%04X)
+00645760	HprRes6.dll
+006457a4	Settings
+006457b0	TearOffMnu
+006457c4	HyperSnap-DX 5
+006457d4	-regonly
+006457f0	Multibytetowide
+00645800	Error in Conversion
+00645814	Cold not register HprSnap6.tlb, hres = %X
+00645840	Error
+00645848	Cold not load HprSnap6.tlb
+0064586c	-uninstall
+00645878	-iconic
+00645880	-readopts
+0064588c	-initfrom:
+0064589c	-nosavedir
+006458a8	-nosetdir
+006458bc	-dumpopts
+006458c8	IniReadTime
+006458d4	Window
+006458e0	This BETA TEST version of HyperSnap 6 has now expired.\nPlease download and install a newer beta or a fully\nreleased version from:\n\n	
+00645a20	 program files are damaged, most probably by a computer virus that infected your machine. It will no longer run, please clean your system from viruses, then download and install a fresh copy of 
+00645af4	HprSnap6.Document
+00645b08	TestTest
+00645b14	\hprsnap6man.chm
+00645b34	::/html/licensing.html
+00645b4c	CLOCKBACK
+00645b58	CLOCKFORWARD
+00645b68	EXPIRED
+00645b70	DAYSLEFT
+00645b7c	HprUnInst.log
+00645c10	 Beta %d
+00645c2c	Unlicensed Evaluation Copy
+00645c48	HS6ClipImage_*.*
+00645c60	SaveOpts
+00645c6c	QSaveOpts
+00645c78	EmailOpts
+00645c9c	EnableHotKeys
+00645cac	HandlePrintScreen
+00645cd8	Control Panel\International
+00645cf4	iMeasure
+00645d00	InvertBw
+00645d0c	Print
+00645d1c	BlackLevel
+00645d28	DrawFrame
+00645d34	CenterImage
+00645d40	Units
+00645d48	LeftMarg
+00645d54	RightMarg
+00645d60	TopMarg
+00645d68	BotMarg
+00645d70	PgOrient
+00645d7c	AutoFit
+00645d84	AFitTooLarge
+00645d94	Scale
+00645d9c	UsePrnRes
+00645da8	ActMargLeft
+00645db4	ActMargRight
+00645dc4	ActMargTop
+00645dd0	ActMargBottom
+00645de0	WINSPOOL
+00645e14	hidden
+00645e2c	onewin
+00645e44	quicksave
+00645e54	fixed_title
+00645e80	:window
+00645e88	:region
+00645eb8	last_h
+00645ec0	Grabber
+00645ec8	last_w
+00645ed8	last_sy
+00645ee8	colsubst
+00645ef4	scale:
+00645f14	stamp
+00645f1c	invertbw
+00645f28	convertbw
+00645f34	print
+00645f64	phed:
+00645f6c	dumpopts
+00645f78	SOFTWARE\Classes\ARK.Morpheus.Layout\Shell\Open\Command
+00645fb4	morpheus.chm
+00645fc4	\morpheus.html
+00645fd4	\morpheus.chm
+00645fe4	\morpheus.exe
+00646000	wininet.dll
+0064600c	http://www.hyperionics.com
+00646048	/promo/promo01.php
+00646418	CaptureRegion
+0064642c	SaveImage
+00646444	CaptureTextByWinTitle
+0064645c	CaptureText
+0064646c	CaptureWindow
+0064647c	AutoScroll
+00646488	CHprSnapDoc
+00646498	HyperSnap 6\nSnap\nSnap\nSnap\n.bmp\nHprSnap6.Document\nHprSnap6.Document
+00646674	ftp=ftp://%s:%d
+00646684	Error: could not initialize Internet connection.\n
+006466bc	Error: could not connect to FTP server.\n
+006466e8	Error uploading file.\n
+00646708	%compname%
+00646880	CHprSnapView
+00646aa8	BackColor
+00646abc	HatchColor
+00646ac8	HatchIndex
+00646ad4	ImageCentered
+00646ae4	DefaultWidth
+00646af4	DefaultHeight
+00646b04	CropZoom
+00646b10	html/image_pos_options.html
+00646cb8	D:\Program Files\Microsoft Visual Studio 8\VC\atlmfc\include\afxwin1.inl
+00646d04	Exception thrown in destructor
+00646d24	%s (%s:%d)\n%s
+00646d34	%s (%s:%d)
+00646d40	CHPToolbarCustomize
+00646f58	::/html/chng_res_image_menu.html
+0064727c	CMainFrame
+00647298	RCONTROL
+006472a4	LCONTROL
+006472b0	RSHIFT
+006472c0	OEM_NEC_EQUAL
+006472d0	SCROLL
+006472d8	NUMLOCK
+00647340	DIVIDE
+00647348	DECIMAL
+00647350	SUBTRACT
+0064735c	SEPARATOR
+0064736c	MULTIPLY
+006473b8	NUMPAD1
+006473f0	DELETE
+006473f8	INSERT
+00647400	SNAPSHOT
+0064740c	EXECUTE
+00647414	PRINT
+0064741c	SELECT
+0064742c	RIGHT
+00647454	PRIOR
+0064745c	SPACE
+00647470	PAUSE
+00647488	SHIFT
+00647490	RETURN
+00647498	CLEAR
+006474ac	HyperSnap-DXTextMsg
+006474c0	TaskbarCreated
+00648670	HyperSnap
+00648680	\twain.dll
+0064868c	\twain_32\
+00648698	Settings\ControlBars
+006486b0	SOFTWARE\Hyperionics\HyperSnap-DX v.5
+006486f0	SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\HprSnap5.exe
+00648744	WantHelp
+00648750	Transparent
+0064875c	MultiModeStart
+0064876c	defRegShape
+00648778	ScrollUpdateTime
+0064878c	nDelay
+00648794	nExtraDelay
+006487a0	WantCursor
+006487ac	Restore
+006487b4	HideBeforeCapture
+006487c8	ColorCode
+006487dc	BtnBottom
+006487f0	BtnRight
+006487fc	FontSmoothingOff
+00648810	MRegMargin
+0064881c	MRegChoice
+00648828	ClearTransp
+00648834	WinLeft
+0064883c	WinTop
+00648844	WinRight
+00648850	WinBottom
+0064885c	WantCaptureSound
+00648870	ProcessOnlyDifferent
+00648888	MarkAsModified
+00648898	VeChoice
+006488a4	QuickCopy
+006488b0	TextSnap
+006488bc	QuickPaste
+006488c8	QpMinimize
+006488d4	QuickPrint
+006488e0	PasteWinTitle
+006488f0	HorizRes
+006488fc	VertRes
+00648904	MouseKey
+00648910	Speech
+00648918	WantXPLook
+00648924	UserFlags
+00648930	StampDir
+0064893c	AutoAddStamps
+0064894c	TxDelay
+00648954	ms_bTxObjAutoscr
+00648968	DefTxtFormat
+00648978	%sBCGCommandManager
+0064898c	AllMenuCmds
+006489a8	QuickPasteKeys
+006489b8	TileSize
+006489c4	LDialog
+006489d4	EmbDepth
+006489e0	Sharpness
+006489ec	::/html/welcome.html
+00648a04	rotate_image_menu.html
+00648a1c	shear_image_menu.html
+00648a34	mosaic_image_menu.html
+00648a4c	emboss_image_menu.html
+00648a64	sharpenblur_image_menu.html
+00648a80	halftone_color.html
+00648aa0	::/html/basic_tutorials.html
+00648ac0	::/html/advanced_tutorials.html
+00648ae0	::/html/support.html
+00648af8	::/html/voice_commands.html
+00648b14	commands_tab.html
+00648b28	toolbars_tab.html
+00648b3c	tools_tab.html
+00648b4c	keyboard_tab.html
+00648b60	menu_tab.html
+00648b70	options_tab.html
+00648b84	::/html/manage_windows.html
+00648bc8	LastIniFile
+00648c04	Rich Text Format
+006490f8	RichEdit20W
+00649500	\template.rtf
+00649538	\aliases.txt
+00649554	aliases.txt
+00649574	Popup help file missing!
+006499d4	::/html/scale_image_menu.html
+00649c70	::/html/file_send_email.html
+00649ea8	ShadowState
+00649eb4	Shadow
+00649ebc	Background
+00649ec8	Direction
+00649ed4	::/html/shadow_image_menu.html
+0064a0e8	Append
+0064a0f0	Interlace
+0064a0fc	Minimize
+0064a108	CopyPath
+0064a114	Quality
+0064a11c	QFactor
+0064a124	Format
+0064a12c	Flags
+0064a134	AutoSelBits
+0064a140	BitsBest
+0064a14c	ColorRes
+0064a158	CurDir
+0064a160	NoPlacesBar
+0064a16c	Software\Microsoft\Windows\CurrentVersion\Policies\ComDlg32
+0064a348	::/html/file_save_as.html
+0064a664	GEM Imag
+0064a670	Microsoft Paint
+0064a680	MacPaint
+0064a68c	Microsoft FAX format
+0064a6a4	CALS Raster file
+0064a6b8	IOCA, compressed using CCITT group 4, without the MO:DCA wrapper
+0064a700	IOCA, compressed using CCITT  group 3, 2 dimensions, without the MO:DCA wrapper
+0064a750	IOCA, compressed using CCITT  group 3, 1 dimension, without the MO:DCA wrapper
+0064a7a0	IOCA, compressed using CCITT group 4
+0064a7c8	IOCA, compressed using CCITT group 3, 2 dimensions
+0064a7fc	IOCA, compressed using CCITT group 3, 1 dimension
+0064a830	Winfax, compressed using CCITT group 4
+0064a858	Winfax, compressed using CCITT group 3, 1 dimension
+0064a88c	Raw FAX, compressed using CCITT group 4
+0064a8b4	Raw FAX, compressed using CCITT group 3, 2 dimensions
+0064a8ec	Raw FAX, compressed using CCITT group 3, 1 dimension
+0064a924	TIFF, compressed using CCITT, group 4
+0064a94c	TIFF, compressed using CCITT, group 3, 2 dimensions
+0064a980	TIFF, compressed using CCITT, group 3, 1 dimension
+0064a9b4	TIFF, compressed using CCITT
+0064a9d4	LEAD Proprietary 1-bit Compression Format
+0064aa08	MacPict.
+0064aa14	Word Perfect.
+0064aa24	Sun Raster.
+0064aa30	Encapsulated PostScript with an embedded WMF file
+0064aa64	Encapsulated PostScript with an embedded TIFF file
+0064aa98	Encapsulated PostScript.
+0064aabc	Portable Network Graphics.
+0064aad8	Adobe Photoshop 3.0.
+0064aaf0	Windows Enhanced Meta Fil
+0064ab0c	Windows Meta File.
+0064ab2c	Windows AVI (video) file
+0064ab48	DICOM color (RGB).
+0064ab5c	DICOM grayscale.
+0064ab70	Exif file containing a JPEG compressed image and YUV 4:1:1 color spacing
+0064abc0	Exif file containing a JPEG compressed image and YUV 4:2:2 color spacing
+0064ac10	Exif file containing a TIFF image, with no compression and with YCbCr color space.
+0064ac68	Exif file containing a TIFF image, with no compression and with RGB color space
+0064acb8	FlashPix, compressed with JPEG, using a specified Q factor.
+0064acf4	FlashPix, compressed with JPEG, using the default Q factor.
+0064ad30	FlashPix, compressed with the single color method.
+0064ad64	FlashPix, with no compression.
+0064ad84	Kodak PhotoCD
+0064ad94	Windows cursor file.
+0064adac	Windows icon file.
+0064adc0	OS/2 BMP version 2.x.
+0064add8	OS/2 BMP version 1.x.
+0064adf0	Windows BMP, with RLE compression.
+0064ae14	Windows BMP, with no compression.
+0064ae38	Tagged Image File with PackBits Compression and color YCbCr space.
+0064ae80	Tagged Image File with PackBits Compression and CMYK color space.
+0064aec8	Tagged Image File with PackBits Compression and RGB color space.
+0064af10	Tagged Image File, with no compression and with YCbCr color space
+0064af58	Tagged Image File, with no compression and with CMYK color space
+0064afa0	Tagged Image File Format, with no compression and with RGB color space and 8-bit grayscale
+0064affc	Tagged Image File with LZW Compression and YCbCr color space.
+0064b03c	Tagged Image File with LZW Compression and CMYK color space.
+0064b07c	Tagged Image File with LZW Compression and RGB color space.
+0064b0b8	CompuServe GIF.
+0064b0c8	Tagged Image File with JPEG compression and YUV 4:1:1 color space.
+0064b110	Tagged Image File with JPEG compression and YUV 4:2:2 color space.
+0064b158	Tagged Image File with JPEG compression and YUV 4:4:4 color space and Lossless.
+0064b1a8	JPEG 2000
+0064b1b4	JPEG File Interchange Format with YUV 4:1:1 color space.
+0064b1f0	JPEG File Interchange Format with YUV 4:2:2 color space.
+0064b230	JPEG File Interchange Format with YUV 4:4:4 color space and Lossless.
+0064b278	LEAD Proprietary Compression Format.
+0064b308	File: %s\r\n
+0064b494	FontSize
+0064b4a0	JustHead
+0064b4ac	JustFoot
+0064b4b8	HeaderText
+0064b4c4	FooterText
+0064b640	::/html/file_page_setup.html
+0064b7d0	CStampEditSheet
+0064b8e4	image_tab.html
+0064b8f4	text_tab.html
+0064b904	frame_tab.html
+0064b914	placement_tab.html
+0064b928	stamp_options_tab.html
+0064b940	StampFrameWidth
+0064b950	StampFrameColor
+0064b960	StampBackColor
+0064bac8	CStampFramePage
+0064bcd4	CStampImgPage
+0064bf4c	CStampOptsPage
+0064c134	CStampPlacePage
+0064c700	::/html/stamps_image_menu.html
+0064ca28	CStampTextPage
+0064cbe8	Paragraph
+0064cbf4	UpdTextImm
+0064cd84	CreateMappedBitmap
+0064ce30	StartMin
+0064ce3c	TrayIcon
+0064ce48	NoClose
+0064ce50	Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders
+0064ce94	Common Startup
+0064cea8	\HyperSnap 6.lnk
+0064cebc	Startup
+0064cec4	%APPDATA%
+0064ced0	SetPath failed!
+0064cee0	SetDescription failed!
+0064cef8	::/html/staruptrayicon_options.html
+0064d080	bad allocation
+0064d090	Delete
+0064d098	NoRemove
+0064d0a4	ForceRemove
+0064d0c4	CLSID
+0064d0cc	ProfileName
+0064d0d8	ServerName
+0064d0f4	SavePassword
+0064d104	PassiveMode
+0064d110	Password
+0064d11c	UseProxy
+0064d128	ProxyName
+0064d134	ProxyPort
+0064d320	%server%
+0064d348	::/html/file_ftp_upload.html
+0064d4e0	CUrlSpecDlg
+0064d618	::/html/ftp_link_spec.html
+0064d830	HyperSnap_Wallpaper.bmp
+0064d848	WallpaperDlg
+0064d860	Control Panel\Desktop
+0064d878	WallpaperStyle
+0064d888	TileWallpaper
+0064d898	::/html/file_set_as_wallpaper.html
+0064da20	CZoomComboButton
+0064dab8	Arial
+0064dd88	OFormSub
+0064dd94	Internet Explorer_Server
+0064ddb8	MozillaWindowClass
+0064ddcc	NS_AE_WindowClass
+0064dde8	OperaWindowClass
+0064ddfc	FRAMES2
+0064de04	ScrollBar
+0064de10	SCROLLCUR
+0064df58	OverlayHook.dll
+0064df68	start_engine
+0064df78	stop_engine
+0064df84	set_frame_rate
+0064df94	get_overlay_picture
+0064e010	::/html/extended_capture.html
+0064e1dc	R: %02X\nG: %02X\nB: %02X
+0064e360	PrintWindow
+0064e36c	user32.dll
+0064e378	tooltips_class32
+0064e38c	OfficeTooltip
+0064e3a4	SysShadow
+0064e3c0	HSVoice.cfg
+0064e3d8	HSVoice.xml
+0064e41c	CBCGMDIChildWnd
+0064e654	CBCGMDIFrameWnd
+0064e8f0	BCGKeyboardManager
+0064e904	%sBCGKeyboard-%d
+0064e918	Accelerators
+0064e948	\ControlBars
+0064e958	WindowPlacement
+0064e968	MainWindowRect
+0064e980	\SizingBars
+0064e98c	BCGControlBarVersion
+0064e9a4	Major
+0064e9ac	Minor
+0064e9b4	BCGWorkspace
+0064ea18	CBCGRegistry
+0064eaec	CBCGURLLinkButton
+0064ecc0	D:\Program Files\Microsoft Visual Studio 8\VC\atlmfc\include\afxwin2.inl
+0064ed0c	BCGUserToolsManager
+0064ed20	Tools
+0064ed28	CBCGUserTool
+0064ed5c	Tahoma
+0064ed64	MS Sans Serif
+0064ed74	Marlett
+0064ed98	CBCGToolbarCustomize
+0064efa0	CBCGToolBar
+0064efac	BCGToolBars
+0064efb8	BCGTOOLBAR_POPUPMENU
+0064efd0	BCGTOOLBAR_CUSTOMIZE
+0064efe8	BCGTOOLBAR_CREATE
+0064effc	BCGTOOLBAR_DELETE
+0064f010	BCGTOOLBAR_CUSTOMIZEHELP
+0064f02c	BCGTOOLBAR_RESETTOOLBAR
+0064f044	BCGTOOLBAR_RESETMENU
+0064f05c	BCGTOOLBAR_SHOWREGULARMENU
+0064f078	BCGTOOLBAR_RESETCONTEXTMENU
+0064f094	BCGTOOLBAR_RESETKEYBAORD
+0064f0b0	BCGToolBar:%x:%x:%x:%x
+0064f450	%sBCGToolBar-%d
+0064f460	%sBCGToolBar-%d%x
+0064f47c	Buttons
+0064f484	%sBCGToolbarParameters
+0064f49c	Tooltips
+0064f4a8	ShortcutKeys
+0064f4b8	LargeIcons
+0064f4c4	MenuAnimation
+0064f4d4	RecentlyUsedMenus
+0064f4e8	MenuShadows
+0064f4f4	ShowAllMenusAfterDelay
+0064f518	CommandsUsage
+0064f528	OriginalItems
+0064f7c4	CBCGVisualManager
+0064f87c	ImageList_Draw
+0064f88c	CBCGToolbarButton
+0064f8a4	BCGToolbarButton%lx
+0064f96c	CBCGMenuBar
+0064f978	BCGMenuBar
+0064fcb0	CBCGToolbarComboBoxButton
+0064ff68	SOFTWARE\
+0064ff74	WINDOW_HELP
+00650220	CBCGPopupMenu
+00650370	Recent File
+0065051c	CommandsWithoutImages
+0065053c	CBCGWinXPVisualManager
+00650570	UxTheme.dll
+0065057c	OpenThemeData
+0065058c	CloseThemeData
+0065059c	DrawThemeBackground
+006505c0	BUTTON
+006505d0	STATUS
+006505e0	WINDOW
+006505f0	REBAR
+006505fc	COMBOBOX
+00650610	PROGRESS
+006506cc	CBCGButton
+0065097c	ImageList_ReplaceIcon
+00650994	ImageList_AddMasked
+00650a68	BCGM_ONCHANGE_ACTIVE_TAB
+00650a84	BCGM_ON_HSCROLL
+00650a94	BCGM_ON_RENAME_TAB
+00650aa8	SysListView32
+00650da0	ImageList_GetImageInfo
+00650fb8	ImageList_GetImageCount
+00650fd0	CBCGToolDockBar
+00650fe0	ControlBars-TearOff
+00651000	State
+006511e4	CBCGToolbarMenuButton
+006512d8	CBCGMiniDockFrameWnd
+006515a4	CBCGFrameWnd
+00651814	CBCGOleIPFrameWnd
+00651aac	BCGContextMenuManager
+00651ac4	CBCGMouseManager
+00651ad8	Mouse
+00651b4c	BCGRebar-%ld
+00651b64	CBCGSizingControlBar
+00651b7c	BCGSizingControlBar
+00651d98	%s-SCBar-%d
+00651db0	sizeHorzCY
+00651dbc	sizeVertCX
+00651dc8	sizeVertCY
+00651dd4	sizeFloatCX
+00651de0	sizeFloatCY
+00651dec	Expanded
+00651df8	RolledFloat
+00651e04	RolledFloatDynamicState
+0065202c	MenuCommand
+00652038	MenuPopup
+0065207c	CBCGToolbarsPage
+00652090	CBCGCustomizePage
+00652900	CBCGKeyboardPage
+00652b9c	CBCGMenuPage
+00652c60	Can't create context menu!
+00652e04	CBCGMousePage
+00653034	CBCGOptionsPage
+006532c4	CCustomizeButton
+006533a8	CBCGOleDocIPFrameWnd
+006538a0	CBCGToolbarSystemMenuButton
+00653990	CBCGDropDownToolbarButton
+006539ac	CBCGDropDownFrame
+006539c0	CBCGDropDownToolBar
+00654090	CBCGOutlookButton
+00654154	CBCGOutlookBar
+00654164	CBCGOutlookBarPage
+00654178	CBCGOutlookBarPageButton
+00654344	CBCGCaptionBar
+00654668	CBCGShowAllButton
+00654768	CBCGToolbarMenuButtonsButton
+00654854	CBCGDialog
+0065487c	CBCGPopupMenuBar
+006549b8	MenuShowDelay
+00654c20	CBCGColorBar
+00654c30	CColorButton
+006550d0	CBCGDialogBar
+00655f30	CBCGMenuButton
+00656cc8	CBCGColorMenuButton
+00656cdc	BCGTOOLBAR__GETDOCUMENTCOLORS
+00657130	CColorPopup
+0065743c	CPropertySheetCtrl
+006575f0	CColorPage1
+0065781c	CColorPage2
+00657ac4	IsWow64Process
+00657ad4	kernel32
+00657ae0	IsCompositionActive
+00657af4	AdobeAcrobat
+00657b04	TextSnap32to64
+00657b18	Error: Inconsistent 64 and 32 bit versions of TextSnap. Reinstall the product.
+00657b68	TsHelper64.exe
+00657b78	HSTxtCap.dll
+00657b88	GetSharedData
+00657b98	CaptureConsoleText
+00657bac	InstallTxMsgHook
+00657bc0	ReleaseTxMsgHook
+00657bd4	TxSnap_SetSnapMoreMode
+00657bec	iTunes
+00657bf4	DISPLAY
+00657cf8	CROSSCUR
+00657e4c	Cannot get temp path in ProcessCaptureRtf()\r\n
+00657e80	{\rtf1\ansi\ansicpg1252\deff0\deflang1033
+00657ec0	\fdecor
+00657ed0	\fmodern
+00657edc	\fRoman
+00657ee4	\fscript
+00657ef8	\fcharset%d %s;}
+00657f18	{\colortbl;
+00657f24	\red%d\green%d\blue%d;
+00657f98	\strike%s 
+00657fd0	Cannot get temp path in ProcessCaptureTabDelimited()\r\n
+00658008	CPntCtrl
+00658014	_PAINT_CONTROL_IMAGE_CHANGED_
+00658034	_PAINT_CONTROL_MAG_CHANGED_
+00658050	_PAINT_CONTROL_COLOUR_SAMPLER
+00658070	_PAINT_CONTROL_MODE_CHANGED
+0065808c	_PAINT_BK_COLOR_CHANGED
+006580a4	_PAINT_FILE_DROPPED
+006580b8	_PAINT_SCROLL
+006580c8	_PAINT_RESIZE_IMG
+006580dc	_PAINT_WINDOW_PROPS
+006580f0	_PAINT_SHAPE_ADDED
+00658120	MFCPaintCtrl
+00658610	CColourPicker
+00658a6c	CCoolCombo
+00658c98	ImageList_SetBkColor
+00658cb0	ImageList_GetBkColor
+00658cc8	ImageList_GetIcon
+00658cdc	COXGridEdit
+00658ec0	SysHeader32
+006593f0	CMenuBtn
+00659628	ZIPLIB
+00659630	png_create_write_struct error!\n
+00659650	png_create_info_struct error!\n
+00659670	Jpeg error
+0065967c	Unexpected error reading JPEG file.
+00659c9c	CNSFlexDialog
+00659e88	CColourPickerPopup
+0065a0a4	CCoolComboPopup
+0065a34c	CToolBarEx
+0065a7a8	COXGridHeader
+0065a9b4	ComboBox
+0065a9ec	', trying to retrieve '
+0065aa04	', stored '
+0065aa10	NameValuePairs: type mismatch for '
+0065aa34	ValueNames
+0065aa40	Clone() is not implemented yet.
+0065aa60	unknown
+0065aa68	CryptoMaterial: this object contains invalid values
+0065aa9c	CryptoMaterial: this object does not support precomputation
+0065aad8	PK_MessageAccumulator: DigestSize() should not be called
+0065ab14	PK_MessageAccumulator: TruncatedFinal() should not be called
+0065ab54	" not used
+0065ab60	AlgorithmParametersBase: parameter "
+0065ab8c	PublicElement
+0065ab9c	Log2Base
+0065aba8	DecodingLookupArray
+0065abbc	InsertLineBreaks
+0065abd0	MaxLineLength
+0065abe0	PK_MessageEncodingMethod: this signature scheme does not support message recovery
+0065ac8c	%d.%02d.%02d.%02d
+0065acc0	VerCheckDays
+0065acd0	Vcheck
+0065acd8	lvAsked
+0065ace8	lvMinor
+0065ad08	AdEngine
+0065ad14	NewVerURL
+0065ad20	Message
+0065ad28	MessageURL
+0065ad38	CLSID\{%X-C9A3-1B3F-B185-D6A527AE017B}\VERSION
+0065ad68	Identities\{%X-CA39-31BF-B518-527AD6AE017B}
+0065ad98	HyperSnap-DX 4
+0065ada8	PD:{HyperSnap-DX ver. 4.xx
+0065adc4	FileBox eXtender 1
+0065add8	PD:{FileBox eXtender ver. 1.xx
+0065ae5c	Licensed User
+0065ae7c	Software\
+0065ae98	Unflushable<T>: this object has buffered input that cannot be flushed
+0065aee0	ThisObject:
+0065aef0	DL_ElgamalLikeSignatureAlgorithm: this signature scheme does not support message recovery
+0065af4c	AllocatorBase: requested size would cause integer overflow
+0065af88	vector<T> too long
+0065af9c	ThisPointer:
+0065afac	: Missing required parameter '
+0065b3fc	netmsg.dll
+0065b408	COXInstanceManager
+0065b438	DDE Server Window
+0065b44c	OleMainThreadWndName
+0065b69c	MD5::update:  Can't update a finalized digest!
+0065b6cc	MD5::finalize:  Already finalized this digest!
+0065b6fc	finalized the digest!
+0065b714	MD5::hex_digest:  Can't get digest if you haven't 
+0065b750	bad locale name
+0065b764	ios_base::badbit set
+0065b77c	ios_base::failbit set
+0065b794	ios_base::eofbit set
+0065b7ac	bad cast
+0065b808	 Beta Test %d
+0065b818	urlmon.dll
+0065b824	Version: 
+0065b830	%lu %lu %lu
+0065b83c	AdEngine: 
+0065b848	NewVerMsg: 
+0065b854	NewVerURL: 
+0065b860	Message: 
+0065b86c	MessageURL: 
+0065c100	CDIBSection
+0065c18c	Control Panel\Cursors
+0065c1a4	GetCursorInfo
+0065c1cc	dwmapi.dll
+0065c1d8	DwmIsCompositionEnabled
+006863ee	InternetGetCookieA
+00686404	InternetCanonicalizeUrlA
+00686420	InternetOpenA
+00686430	InternetSetOptionA
+00686446	InternetConnectA
+0068645a	InternetGetLastResponseInfoA
+0068647a	FtpPutFileA
+00686488	InternetCloseHandle
+0068649e	InstallSizerHook
+006864b2	SizerHandleWindow
+006864c6	HsPrintWindow
+006864d6	RemoveSizerHook
+006864e8	DwmGetWindowAttribute
+00686500	DwmIsCompositionEnabled
+0068651a	DwmGetColorizationColor
+00686534	URLDownloadToCacheFileA
+0068654e	GdipCreateHBITMAPFromBitmap
+0068656c	GdipCreatePen1
+0068657e	GdipDeleteBrush
+00686590	GdipCloneBrush
+006865a2	GdipDeletePen
+006865b2	GdipCreateSolidFill
+006865c8	GdipFree
+006865d4	GdipAlloc
+006865e0	GdipFillPath
+006865f0	GdipSetSmoothingMode
+00686608	GdipSetPenWidth
+0068661a	GdipCreatePath
+0068662c	GdipSetPenLineCap197819
+00686646	GdipCreatePath2
+00686658	GdipDeletePath
+0068666a	GdiplusStartup
+0068667c	GdiplusShutdown
+0068668e	GdipSetSolidFillColor
+006866a6	GdipDrawLineI
+006866b6	GdipSetPenCustomStartCap
+006866d2	GdipClosePathFigure
+006866e8	GdipSetPenCustomEndCap
+00686702	GdipAddPathLineI
+00686716	GdipAddPathArcI
+00686728	GdipDrawEllipseI
+0068673c	GdipSetPenColor
+0068674e	GdipDrawPath
+0068675e	GdipCreateFromHDC
+00686772	GdipSetPenDashStyle
+00686788	GdipDeleteGraphics
+0068679e	GdipAddPathRectangleI
+006867b6	GdipFillEllipseI
+006867ca	GdipCreateCustomLineCap
+006867e4	GdipDeleteCustomLineCap
+006867fe	GdipDisposeImage
+00686812	GdipCreateRegionHrgn
+0068682a	GdipCloneImage
+0068683c	GdipDeleteRegion
+00686850	GdipCombineRegionRegion
+0068686a	GdipCreateBitmapFromScan0
+00686892	GdipReleaseDC
+006868a2	GdipCloneRegion
+006868b4	GdipTranslateRegionI
+006868cc	GdipGetImageHeight
+006868e2	GdipGetImageWidth
+006868f6	GdipCombineRegionRectI
+00686910	GdipSetClipRegion
+00686924	GdipGraphicsClear
+00686938	GdipBitmapLockBits
+0068694e	GdipBitmapUnlockBits
+00686966	GdipGetImageGraphicsContext
+00686984	GdipResetClip
+00686994	CreateStdAccessibleObject
+006869b0	LresultFromObject
+006869c4	InternetGetConnectedState
+006878be	WINMM.dll
+006878c8	LTFIL10N.DLL
+00687900	LTDIS10N.dll
+0068872a	KERNEL32.dll
+0068976c	USER32.dll
+0068a006	GDI32.dll
+0068a060	comdlg32.dll
+0068a0bc	WINSPOOL.DRV
+0068a1fc	ADVAPI32.dll
+0068a302	SHELL32.dll
+0068a358	COMCTL32.dll
+0068a3b2	SHLWAPI.dll
+0068a3be	oledlg.dll
+0068a688	ole32.dll
+0068a692	OLEAUT32.dll
+0068a6f2	MSVFW32.dll
+0068a740	VERSION.dll
+0068a7c2	HprSnap6.exe
+0068a7cf	HS6Callback
+0072786c	unknown compression method
+00727888	invalid window size
+0072789c	incorrect header check
+007278b4	need dictionary
+007278c4	incorrect data check
+00727904	need dictionary
+00727914	stream end
+00727920	file error
+0072792c	stream error
+0072793c	data error
+00727948	insufficient memory
+0072795c	buffer error
+0072796c	incompatible version
+007279d4	invalid block type
+007279e8	invalid stored block lengths
+00727a08	too many length or distance symbols
+00727a2c	invalid bit length repeat
+00727a48	invalid literal/length code
+00727a64	invalid distance code
+00728b88	oversubscribed dynamic bit lengths tree
+00728bb0	incomplete dynamic bit lengths tree
+00728bd4	oversubscribed literal/length tree
+00728bf8	incomplete literal/length tree
+00728c18	oversubscribed distance tree
+00728c38	incomplete distance tree
+00728c54	empty distance tree with lengths
+00728cbc	invalid distance code
+00728cd4	invalid literal/length code
+00728cfc	.?AVbad_alloc@std@@
+00728d18	.?AVexception@std@@
+00728e18	.?AVtype_info@@
+00728f86	abcdefghijklmnopqrstuvwxyz
+00728fa6	ABCDEFGHIJKLMNOPQRSTUVWXYZ
+00729191	abcdefghijklmnopqrstuvwxyz
+007291b1	ABCDEFGHIJKLMNOPQRSTUVWXYZ
+00729e84	System
+00729e8c	System
+00729e9c	DDE Processing
+00729eb4	DDE Processing
+00729ee4	Required USB Key not found
+00729f00	Failed CRC check
+00729f14	Relocations error
+00729f28	Failed to execute target process
+00729f4c	DLL initialization failed
+00729f68	Cannot set allocations
+00729f80	Cannot find import; DLL may be missing, corrupt, or wrong version
+00729fc4	Cannot allocate memory for DLL
+00729fe4	Cannot locate protected program data
+0072a00c	General extraction error
+0072a028	Insufficient memory!
+0072a040	SetFunctionAddresses
+0072a06c	ARMSPLASHOFF
+0072a07c	File "%s", function "%s"
+0072a098	File "%s", ordinal %d
+0072a0b0	File "%s", error %d
+0072a0c4	(Error code %d)
+0072a0dc	IsDebuggerPresent
+0072a0f0	Kernel32
+0072a0fc	(Location XEB, error code %d)
+0072a12c	MainClass
+0072a154	RegisterServiceProcess
+0072a16c	KERNEL32.DLL
+0072a180	INITIALIZEDLLADDR
+0072a194	Loading...
+0072a1a0	MS Sans Serif
+0072a1bc	ARMDEBUG=
+0072a1c8	QUIETEXIT
+0072a1d4	HWCHANGELOG
+0072a1e0	SHOWNETUSERS
+0072a1f0	QUIETUNREGISTER
+0072a200	UNREGISTER
+0072a214	FIXCLOCK
+0072a220	TRANSFER
+0072a22c	QUIETREGISTER
+0072a23c	REGISTER
+0072a254	SERVER
+0072a25c	LOADINGWINDOW
+0072a26c	ArBase Bitmap Window
+0072a284	ArBase Test Bitmap Window
+0072a314	Shutdown
+0072a33c	(Unicode) 
+0072a348	Error: Access violation at 0x%08X (tried to %s 0x%08X), program terminated.
+0072a394	read from
+0072a3a0	write to
+0072a3ac	OutputDebugStringW
+0072a3c0	OutputDebugStringA
+0072a3dc	SetProcessShutdownParameters
+0072a3fc	kernel32.dll
+0072a410	PropertySheetA
+0072a420	COMCTL32.DLL
+0072a430	_TrackMouseEvent
+0072a450	 deflate 1.1.4 Copyright 1995-2002 Jean-loup Gailly 
+0072b380	 inflate 1.1.4 Copyright 1995-2002 Mark Adler 
+0072b598	bad allocation
+0072b5b4	CorExitProcess
+0072b5c4	mscoree.dll
+0072b5d0	HH:mm:ss
+0072b5dc	dddd, MMMM dd, yyyy
+0072b5f0	MM/dd/yy
+0072b604	December
+0072b610	November
+0072b61c	October
+0072b624	September
+0072b630	August
+0072b648	April
+0072b650	March
+0072b658	February
+0072b664	January
+0072b69c	Saturday
+0072b6a8	Friday
+0072b6b0	Thursday
+0072b6bc	Wednesday
+0072b6c8	Tuesday
+0072b6d0	Monday
+0072b6d8	Sunday
+0072b708	Unknown exception
+0072b7dc	EncodePointer
+0072b7ec	DecodePointer
+0072b7fc	FlsFree
+0072b804	FlsSetValue
+0072b810	FlsGetValue
+0072b81c	FlsAlloc
+0072b828	runtime error 
+0072b83c	TLOSS error\r\n
+0072b84c	SING error\r\n
+0072b85c	DOMAIN error\r\n
+0072b870	R6034\r\nAn application has made an attempt to load the C runtime library incorrectly.\nPlease contact the application's support team for more information.\r\n
+0072b910	R6033\r\n- Attempt to use MSIL code from this assembly during native code initialization\nThis indicates a bug in your application. It is most likely the result of calling an MSIL-compiled (/clr) function from a native constructor or from DllMain.\r\n
+0072ba08	R6032\r\n- not enough space for locale information\r\n
+0072ba40	R6031\r\n- Attempt to initialize the CRT more than once.\nThis indicates a bug in your application.\r\n
+0072baa4	R6030\r\n- CRT not initialized\r\n
+0072bac4	R6028\r\n- unable to initialize heap\r\n
+0072baec	R6027\r\n- not enough space for lowio initialization\r\n
+0072bb24	R6026\r\n- not enough space for stdio initialization\r\n
+0072bb5c	R6025\r\n- pure virtual function call\r\n
+0072bb84	R6024\r\n- not enough space for _onexit/atexit table\r\n
+0072bbbc	R6019\r\n- unable to open console device\r\n
+0072bbe8	R6018\r\n- unexpected heap error\r\n
+0072bc0c	R6017\r\n- unexpected multithread lock error\r\n
+0072bc3c	R6016\r\n- not enough space for thread data\r\n
+0072bc68	\r\nThis application has requested the Runtime to terminate it in an unusual way.\nPlease contact the application's support team for more information.\r\n
+0072bd00	R6009\r\n- not enough space for environment\r\n
+0072bd2c	R6008\r\n- not enough space for arguments\r\n
+0072bd58	R6002\r\n- floating point support not loaded\r\n
+0072bd88	Microsoft Visual C++ Runtime Library
+0072bdb8	<program name unknown>
+0072bdd0	Runtime Error!\n\nProgram: 
+0072bdec	InitializeCriticalSectionAndSpinCount
+0072be8c	SunMonTueWedThuFriSat
+0072bea4	JanFebMarAprMayJunJulAugSepOctNovDec
+0072c6d8	GetProcessWindowStation
+0072c6f0	GetUserObjectInformationA
+0072c70c	GetLastActivePopup
+0072c720	GetActiveWindow
+0072c730	MessageBoxA
+0072c73c	USER32.DLL
+0072c7a4	 Complete Object Locator'
+0072c7c0	 Class Hierarchy Descriptor'
+0072c7e0	 Base Class Array'
+0072c7f4	 Base Class Descriptor at (
+0072c810	 Type Descriptor'
+0072c824	`local static thread guard'
+0072c840	`managed vector copy constructor iterator'
+0072c86c	`vector vbase copy constructor iterator'
+0072c898	`vector copy constructor iterator'
+0072c8bc	`dynamic atexit destructor for '
+0072c8e0	`dynamic initializer for '
+0072c8fc	`eh vector vbase copy constructor iterator'
+0072c928	`eh vector copy constructor iterator'
+0072c950	`managed vector destructor iterator'
+0072c978	`managed vector constructor iterator'
+0072c9a0	`placement delete[] closure'
+0072c9c0	`placement delete closure'
+0072c9dc	`omni callsig'
+0072c9ec	 delete[]
+0072c9f8	 new[]
+0072ca00	`local vftable constructor closure'
+0072ca24	`local vftable'
+0072ca34	`RTTI
+0072ca40	`udt returning'
+0072ca50	`copy constructor closure'
+0072ca6c	`eh vector vbase constructor iterator'
+0072ca94	`eh vector destructor iterator'
+0072cab4	`eh vector constructor iterator'
+0072cad8	`virtual displacement map'
+0072caf4	`vector vbase constructor iterator'
+0072cb18	`vector destructor iterator'
+0072cb38	`vector constructor iterator'
+0072cb58	`scalar deleting destructor'
+0072cb78	`default constructor closure'
+0072cb98	`vector deleting destructor'
+0072cbb8	`vbase destructor'
+0072cbcc	`string'
+0072cbd8	`local static guard'
+0072cbf0	`typeof'
+0072cbfc	`vcall'
+0072cc04	`vbtable'
+0072cc10	`vftable'
+0072cc98	operator
+0072ccbc	 delete
+0072cccc	__unaligned
+0072ccd8	__restrict
+0072cce4	__ptr64
+0072ccec	__clrcall
+0072ccf8	__fastcall
+0072cd04	__thiscall
+0072cd10	__stdcall
+0072cd1c	__pascal
+0072cd28	__cdecl
+0072cd30	__based(
+007305f6	GetShortPathNameA
+0073060a	GetModuleFileNameA
+00730620	GetShortPathNameW
+00730634	GetModuleFileNameW
+0073064a	GetCurrentProcessId
+00730660	InitializeCriticalSection
+0073067c	GetVersionExA
+0073068c	LeaveCriticalSection
+007306a4	EnterCriticalSection
+007306bc	Sleep
+007306c4	CloseHandle
+007306d2	CreateThread
+007306e2	GlobalUnlock
+007306f2	GlobalLock
+00730700	GlobalAlloc
+0073070e	GetTickCount
+0073071e	WideCharToMultiByte
+00730734	IsBadReadPtr
+00730744	GlobalAddAtomA
+00730756	GlobalAddAtomW
+00730768	GetModuleHandleA
+0073077c	GlobalFree
+0073078a	GlobalGetAtomNameA
+007307a0	GlobalDeleteAtom
+007307b4	GlobalGetAtomNameW
+007307ca	FreeConsole
+007307d8	GetEnvironmentVariableA
+007307f2	VirtualProtect
+00730804	VirtualAlloc
+00730814	GetProcAddress
+00730826	GetLastError
+00730836	LoadLibraryA
+00730846	SetLastError
+00730856	SetThreadPriority
+0073086a	GetCurrentThread
+0073087e	CreateProcessA
+00730890	GetCommandLineA
+007308a2	GetStartupInfoA
+007308b4	SetEnvironmentVariableA
+007308ce	ReleaseMutex
+007308de	WaitForSingleObject
+007308f4	CreateMutexA
+00730904	OpenMutexA
+00730912	GetCurrentThreadId
+00730928	CreateFileA
+00730936	FindClose
+00730942	FindFirstFileA
+00730954	FindFirstFileW
+00730966	VirtualQueryEx
+00730978	GetExitCodeProcess
+0073098e	ReadProcessMemory
+007309a2	UnmapViewOfFile
+007309b4	ContinueDebugEvent
+007309ca	SetThreadContext
+007309de	GetThreadContext
+007309f2	WaitForDebugEvent
+00730a06	SuspendThread
+00730a16	DebugActiveProcess
+00730a2c	ResumeThread
+00730a3c	CreateProcessW
+00730a4e	GetCommandLineW
+00730a60	GetStartupInfoW
+00730a72	MapViewOfFile
+00730a82	DuplicateHandle
+00730a94	GetCurrentProcess
+00730aa8	CreateFileMappingA
+00730abe	VirtualProtectEx
+00730ad2	WriteProcessMemory
+00730ae8	ExitProcess
+00730af4	KERNEL32.dll
+00730b04	IsWindow
+00730b10	PostMessageA
+00730b20	PostMessageW
+00730b30	PackDDElParam
+00730b40	IsWindowUnicode
+00730b52	EnumWindows
+00730b60	DispatchMessageA
+00730b74	TranslateMessage
+00730b88	PeekMessageA
+00730b98	SendMessageA
+00730ba8	SendMessageW
+00730bb8	GetWindowThreadProcessId
+00730bd4	CreateWindowExA
+00730be6	RegisterClassA
+00730bf8	CreateWindowExW
+00730c0a	RegisterClassW
+00730c1c	LoadCursorA
+00730c2a	DefWindowProcA
+00730c3c	FreeDDElParam
+00730c4c	UnpackDDElParam
+00730c5e	InSendMessage
+00730c6e	MessageBoxA
+00730c7c	DestroyWindow
+00730c8c	WaitForInputIdle
+00730ca0	FindWindowA
+00730cae	LoadStringW
+00730cbc	LoadStringA
+00730cca	UpdateWindow
+00730cda	ShowWindow
+00730ce8	CreateDialogIndirectParamA
+00730d06	GetDlgItem
+00730d14	SetWindowTextA
+00730d26	EndPaint
+00730d32	BeginPaint
+00730d40	KillTimer
+00730d4c	GetAsyncKeyState
+00730d60	SetTimer
+00730d6c	GetSystemMetrics
+00730d80	GetMessageA
+00730d8e	GetPropA
+00730d9a	EnumThreadWindows
+00730dae	SetPropA
+00730dba	MoveWindow
+00730dc8	GetDesktopWindow
+00730dda	USER32.dll
+00730de8	DeleteObject
+00730df8	DeleteDC
+00730e04	BitBlt
+00730e0e	RealizePalette
+00730e20	SelectPalette
+00730e30	SelectObject
+00730e40	CreateCompatibleDC
+00730e56	CreateDIBitmap
+00730e68	CreateDCA
+00730e74	CreatePalette
+00730e82	GDI32.dll
+00730e8e	GetSystemTimeAsFileTime
+00730ea8	HeapFree
+00730eb4	HeapAlloc
+00730ec0	GetProcessHeap
+00730ed2	RaiseException
+00730ee4	TerminateProcess
+00730ef8	UnhandledExceptionFilter
+00730f14	SetUnhandledExceptionFilter
+00730f32	IsDebuggerPresent
+00730f46	GetCPInfo
+00730f52	InterlockedIncrement
+00730f6a	InterlockedDecrement
+00730f82	GetACP
+00730f8c	GetOEMCP
+00730f98	IsValidCodePage
+00730faa	TlsGetValue
+00730fb8	TlsAlloc
+00730fc4	TlsSetValue
+00730fd2	TlsFree
+00730fdc	WriteFile
+00730fe8	GetStdHandle
+00730ff8	DeleteCriticalSection
+00731010	RtlUnwind
+0073101c	FreeEnvironmentStringsA
+00731036	GetEnvironmentStrings
+0073104e	FreeEnvironmentStringsW
+00731068	GetEnvironmentStringsW
+00731082	SetHandleCount
+00731094	GetFileType
+007310a2	HeapDestroy
+007310b0	HeapCreate
+007310be	VirtualFree
+007310cc	QueryPerformanceCounter
+007310e6	HeapReAlloc
+007310f4	HeapSize
+00731100	LCMapStringA
+00731110	MultiByteToWideChar
+00731126	LCMapStringW
+00731136	GetStringTypeA
+00731148	GetStringTypeW
+0073115a	GetLocaleInfoA
+0073116c	SetFilePointer
+0073117e	GetConsoleCP
+0073118e	GetConsoleMode
+007311a0	SetStdHandle
+007311b0	WriteConsoleA
+007311c0	GetConsoleOutputCP
+007311d6	WriteConsoleW
+007311e6	FlushFileBuffers
+00747000	PDATA000
+008ce560	HyperSnap 6
+008ce578	
+008ce57a	
+008ce57c	
+008ce57e	
+008ce580	
+008ce582	
+008ce584	
+008ce586	
+008ce588	
+008ce58a	
+008ce58c	
+008ce58e	
+008ce590	
+008ce592	
+008ce594	
+008ce598	GroupIcon
+008ce61c	GroupIcon
+008ce630	GroupIcon
+008ce6a6	StringFileInfo
+008ce6ca	040904b0
+008ce6e2	CompanyName
+008ce6fc	Hyperionics Technology LLC
+008ce73a	FileDescription
+008ce75c	HyperSnap
+008ce776	FileVersion
+008ce790	6, 30, 2, 0
+008ce7ae	InternalName
+008ce7c8	HprSnap6
+008ce7e2	LegalCopyright
+008ce800	Copyright (C) 1995-2008 Hyperionics Technology, LLC
+008ce86e	OriginalFilename
+008ce890	HprSnap6.exe
+008ce8b2	ProductName
+008ce8cc	HyperSnap v.6
+008ce8ee	ProductVersion
+008ce90c	6, 30, 2, 0
+008ce92a	VarFileInfo
+008ce94a	Translation
+ffdff1ac	
+ffdffc00	
+ffdfff50	00000000-0000-0000-0000-000000000000
