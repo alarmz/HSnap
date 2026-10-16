@@ -10,7 +10,9 @@ use crate::quicksave::QuickSave;
 use crate::service::{CaptureMode, Captured, Service, Settings, ViewEdit};
 use eframe::egui::{self, Color32, Key, Modifiers, Pos2, Sense, Stroke};
 use image::RgbaImage;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Receiver;
+use std::sync::Arc;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Tool {
@@ -61,6 +63,8 @@ pub enum Zoom {
 pub struct App {
     pub svc: Service,
     captures: Receiver<Captured>,
+    msgs: Receiver<String>,
+    msg_tx: std::sync::mpsc::Sender<String>,
     hotkeys: Hotkeys,
     pub docs: Vec<Document>,
     pub current: usize,
@@ -85,11 +89,16 @@ pub struct App {
     show_status: bool,
     pub dialog: Dialog,
     rng: u64,
+    ctx: egui::Context,
+    tray: Option<crate::tray::Tray>,
+    quitting: Arc<AtomicBool>,
+    first_frame: bool,
 }
 
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let (tx, rx) = std::sync::mpsc::channel();
+        let (msg_tx, msgs) = std::sync::mpsc::channel();
         let settings = Settings::load();
         let svc = Service::new(tx, cc.egui_ctx.clone(), settings.clone());
         let ctx = cc.egui_ctx.clone();
@@ -99,6 +108,8 @@ impl App {
         Self {
             svc,
             captures: rx,
+            msgs,
+            msg_tx,
             hotkeys,
             docs: vec![],
             current: 0,
@@ -123,7 +134,60 @@ impl App {
             show_status: true,
             dialog: Dialog::None,
             rng: 0x2545F4914F6CDD1D,
+            ctx: cc.egui_ctx.clone(),
+            tray: None,
+            quitting: Arc::new(AtomicBool::new(false)),
+            first_frame: true,
         }
+    }
+
+    /// Create or drop the tray icon to match the settings.
+    fn sync_tray(&mut self) {
+        let want = self.settings().show_tray;
+        if want && self.tray.is_none() {
+            match crate::tray::Tray::new(self.svc.clone(), self.ctx.clone(), self.quitting.clone()) {
+                Ok(t) => self.tray = Some(t),
+                Err(e) => self.status = format!("Tray icon failed: {e}"),
+            }
+        } else if !want {
+            self.tray = None;
+        }
+    }
+
+    pub fn push_recent(&mut self, path: &std::path::Path) {
+        let mut s = self.settings();
+        let p = path.to_string_lossy().into_owned();
+        s.recent.retain(|r| *r != p);
+        s.recent.insert(0, p);
+        s.recent.truncate(s.recent_count as usize);
+        self.apply_settings_quiet(s);
+    }
+
+    /// Persist settings without touching hot keys, tray or QuickSave numbering.
+    pub fn apply_settings_quiet(&mut self, s: Settings) {
+        s.save();
+        *self.svc.settings.lock().unwrap() = s;
+    }
+
+    /// Print the current image: with the print dialog, or straight to the default printer.
+    pub fn print_document(&mut self, direct: bool) {
+        let Some(doc) = self.docs.get(self.current) else { return };
+        let (img, name, setup) = (doc.flatten(), doc.name.clone(), self.settings().page_setup);
+        self.spawn_print(img, name, setup, direct);
+    }
+
+    fn spawn_print(&self, img: RgbaImage, name: String, setup: crate::print::PageSetup, direct: bool) {
+        let (tx, ctx) = (self.msg_tx.clone(), self.ctx.clone());
+        std::thread::spawn(move || {
+            let target = if direct { crate::print_gdi::Target::DefaultPrinter } else { crate::print_gdi::Target::Dialog(None) };
+            let msg = match crate::print_gdi::print_image(&img, &setup, &name, target) {
+                Ok(()) => format!("Printed {name}"),
+                Err(e) if e == "cancelled" => "Print cancelled".to_string(),
+                Err(e) => format!("Print failed: {e}"),
+            };
+            let _ = tx.send(msg);
+            ctx.request_repaint();
+        });
     }
 
     pub fn settings(&self) -> Settings {
@@ -136,18 +200,28 @@ impl App {
         self.hotkeys.set(if s.hotkeys_enabled { s.hotkeys.clone() } else { vec![] });
         *self.svc.settings.lock().unwrap() = s;
         self.quicksave = None; // restart numbering with the new template
+        self.sync_tray();
     }
 
     pub fn hotkey_status(&self) -> Vec<(crate::hotkeys::HotkeyAction, bool)> {
         self.hotkeys.registered.lock().unwrap().clone()
     }
 
-    fn on_capture(&mut self, c: Captured) {
+    fn on_capture(&mut self, mut c: Captured) {
         let s = self.settings();
+        let store = crate::stamps::Store { dir: std::path::PathBuf::from(&s.stamps_dir) };
+        for st in store.list().into_iter().filter(|st| st.auto_add) {
+            let pic = store.picture(&st);
+            let m = crate::stamps::MacroCtx::now(c.label, "");
+            c.img = crate::stamps::apply(&c.img, &st, pic.as_ref(), &m, None);
+        }
         if s.only_if_changed && self.last_img.as_ref() == Some(&c.img) {
             return;
         }
         self.last_img = Some(c.img.clone());
+        if s.auto_print {
+            self.spawn_print(c.img.clone(), c.label.to_string(), s.page_setup.clone(), !s.auto_print_prompt);
+        }
         if s.auto_copy {
             copy_to_clipboard(&c.img);
         }
@@ -198,6 +272,45 @@ impl App {
         self.tex_dirty = true;
     }
 
+    /// The selected fragment of the current image (or the whole image when nothing is selected).
+    pub fn selection_fragment(&self) -> Option<RgbaImage> {
+        let (x, y, w, h) = self.region()?;
+        let flat = self.docs.get(self.current)?.flatten();
+        Some(image::imageops::crop_imm(&flat, x, y, w, h).to_image())
+    }
+
+    /// Put a stamp on the current image.
+    pub fn insert_stamp(&mut self, stamp: &crate::stamps::Stamp, picture: Option<&RgbaImage>) {
+        let Some(doc) = self.docs.get(self.current) else {
+            self.status = "Open or capture an image first".into();
+            return;
+        };
+        let path = doc.path.as_ref().map(|p| p.display().to_string()).unwrap_or_default();
+        let m = crate::stamps::MacroCtx::now(&doc.name, &path);
+        let sel = if self.selection.is_some() { self.region() } else { None };
+        let (st, pic) = (stamp.clone(), picture.cloned());
+        self.edit(|d| d.transform(|img| crate::stamps::apply(&img, &st, pic.as_ref(), &m, sel)));
+        self.selection = None;
+        self.status = format!("Inserted stamp {}", stamp.name);
+    }
+
+    fn preview_for_current(&self) -> crate::print_ui::Preview {
+        match self.docs.get(self.current) {
+            Some(d) => crate::print_ui::Preview::new(d.flatten(), d.name.clone()),
+            None => crate::print_ui::Preview::placeholder(),
+        }
+    }
+
+    fn open_print_preview(&mut self) {
+        let prev = self.preview_for_current();
+        self.dialog = Dialog::PrintPreview { prev: Box::new(prev), page: 0 };
+    }
+
+    fn open_page_setup(&mut self) {
+        let prev = self.preview_for_current();
+        self.dialog = Dialog::PageSetup { draft: Box::new(self.settings().page_setup), prev: Box::new(prev) };
+    }
+
     fn has_doc(&self) -> bool {
         !self.docs.is_empty()
     }
@@ -210,11 +323,16 @@ impl App {
 
     fn open_file(&mut self) {
         let Some(path) = rfd::FileDialog::new().add_filter("Images", &["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp"]).pick_file() else { return };
+        self.open_path(path);
+    }
+
+    fn open_path(&mut self, path: std::path::PathBuf) {
         match image::open(&path) {
             Ok(img) => {
                 let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
                 self.new_document(img.to_rgba8(), name);
-                self.docs[self.current].path = Some(path);
+                self.docs[self.current].path = Some(path.clone());
+                self.push_recent(&path);
             }
             Err(e) => self.status = format!("Open failed: {e}"),
         }
@@ -259,6 +377,7 @@ impl App {
                 d.modified = false;
                 d.path = Some(path.clone());
                 d.name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                self.push_recent(&path);
                 format!("Saved {}", path.display())
             }
             Err(e) => format!("Save failed: {e}"),
@@ -407,8 +526,37 @@ fn todo_item(ui: &mut egui::Ui, label: &str) {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
+        if self.first_frame {
+            self.first_frame = false;
+            self.sync_tray();
+            // Developer hook: open a dialog on start-up (used for visual checks).
+            match std::env::var("HSNAP_DIALOG").as_deref() {
+                Ok("pagesetup") => self.open_page_setup(),
+                Ok("stamps") => self.dialog = Dialog::Stamps(Box::new(crate::stamps_ui::Manager::new(std::path::PathBuf::from(self.settings().stamps_dir)))),
+                Ok("stampedit") => self.dialog = Dialog::Stamps(Box::new(crate::stamps_ui::Manager::with_new_editor(std::path::PathBuf::from(self.settings().stamps_dir)))),
+                Ok("preview") => {
+                    let p = crate::print_ui::Preview::placeholder();
+                    self.dialog = Dialog::PrintPreview { prev: Box::new(p), page: 0 };
+                }
+                _ => {}
+            }
+            if self.settings().start_minimized {
+                let cmd = if self.tray.is_some() { egui::ViewportCommand::Visible(false) } else { egui::ViewportCommand::Minimized(true) };
+                ctx.send_viewport_cmd(cmd);
+            }
+        }
+        if ctx.input(|i| i.viewport().close_requested()) {
+            let s = self.settings();
+            if s.show_tray && s.keep_in_tray && self.tray.is_some() && !self.quitting.load(Ordering::Relaxed) {
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                crate::service::show_own(windows::Win32::UI::WindowsAndMessaging::SW_HIDE);
+            }
+        }
         while let Ok(a) = self.hotkeys.events.try_recv() {
             self.svc.handle_hotkey(a);
+        }
+        while let Ok(m) = self.msgs.try_recv() {
+            self.status = m;
         }
         while let Ok(c) = self.captures.try_recv() {
             self.on_capture(c);
@@ -471,13 +619,32 @@ impl App {
                 todo_item(ui, "Acquire");
                 todo_item(ui, "Select Source…");
                 ui.separator();
-                todo_item(ui, "Print…");
-                todo_item(ui, "Print Preview");
-                todo_item(ui, "Page Setup…");
+                if ui.add_enabled(has, egui::Button::new("Print…")).clicked() {
+                    ui.close_menu();
+                    self.print_document(false);
+                }
+                if ui.add_enabled(has, egui::Button::new("Print Preview")).clicked() {
+                    ui.close_menu();
+                    self.open_print_preview();
+                }
+                if ui.button("Page Setup…").clicked() {
+                    ui.close_menu();
+                    self.open_page_setup();
+                }
                 todo_item(ui, "Send by Email…");
                 if ui.add_enabled(has, egui::Button::new("Set as Wallpaper")).clicked() {
                     ui.close_menu();
                     self.set_wallpaper();
+                }
+                let recent = self.settings().recent;
+                if !recent.is_empty() {
+                    ui.separator();
+                    for (i, r) in recent.iter().enumerate() {
+                        if ui.button(format!("{} {}", i + 1, r)).clicked() {
+                            ui.close_menu();
+                            self.open_path(std::path::PathBuf::from(r));
+                        }
+                    }
                 }
                 ui.separator();
                 if ui.button("Exit").clicked() {
@@ -592,7 +759,11 @@ impl App {
                     self.selection = None;
                 }
                 ui.separator();
-                todo_item(ui, "Stamps");
+                if ui.button("Stamps…").clicked() {
+                    ui.close_menu();
+                    let dir = std::path::PathBuf::from(self.settings().stamps_dir);
+                    self.dialog = Dialog::Stamps(Box::new(crate::stamps_ui::Manager::new(dir)));
+                }
                 if ui.add_enabled(has, egui::Button::new("Mirror (horizontal)")).clicked() {
                     ui.close_menu();
                     self.edit(|d| d.flip_horizontal());
@@ -660,7 +831,12 @@ impl App {
                 }
                 todo_item(ui, "Activate Voice Commands");
                 todo_item(ui, "Control Mouse with Keyboard");
-                todo_item(ui, "Startup and Tray Icon…");
+                if ui.button("Startup and Tray Icon…").clicked() {
+                    ui.close_menu();
+                    let mut d = self.settings();
+                    d.autostart = crate::startup::is_enabled("HSnap", d.autostart_all_users); // trust the registry
+                    self.dialog = Dialog::Startup { draft: Box::new(d), error: None };
+                }
             });
             ui.menu_button("Window", |ui| {
                 if ui.add_enabled(has, egui::Button::new("Close All")).clicked() {
@@ -699,6 +875,9 @@ impl App {
             }
             if ui.add_enabled(has, egui::Button::new("Save")).clicked() {
                 self.save();
+            }
+            if ui.add_enabled(has, egui::Button::new("Print Direct")).on_hover_text("Print to the default printer without the dialog").clicked() {
+                self.print_document(true);
             }
             ui.separator();
             for (label, mode) in [("Full Screen", CaptureMode::Full), ("Window", CaptureMode::Window), ("Active", CaptureMode::Active), ("Region", CaptureMode::Region), ("Cursor", CaptureMode::Cursor)] {

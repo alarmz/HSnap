@@ -64,6 +64,17 @@ pub struct Settings {
     pub multi_start_window: bool,
     pub scroll_refresh_ms: u64,
     pub scroll_max_height: u32,
+    pub autostart: bool,
+    pub autostart_all_users: bool,
+    pub start_minimized: bool,
+    pub show_tray: bool,
+    pub keep_in_tray: bool,
+    pub recent_count: u32,
+    pub recent: Vec<String>,
+    pub page_setup: crate::print::PageSetup,
+    pub auto_print: bool,
+    pub auto_print_prompt: bool,
+    pub stamps_dir: String,
 }
 
 /// What happens with each new capture (View & Edit tab).
@@ -105,6 +116,17 @@ impl Default for Settings {
             multi_start_window: false,
             scroll_refresh_ms: 300,
             scroll_max_height: 30_000,
+            autostart: false,
+            autostart_all_users: false,
+            start_minimized: false,
+            show_tray: false,
+            keep_in_tray: false,
+            recent_count: 4,
+            recent: vec![],
+            page_setup: Default::default(),
+            auto_print: false,
+            auto_print_prompt: true,
+            stamps_dir: crate::stamps::Store::default_dir().to_string_lossy().into_owned(),
         }
     }
 }
@@ -280,7 +302,7 @@ fn own_window() -> Option<windows::Win32::Foundation::HWND> {
     unsafe { FindWindowW(None, w!("HSnap")).ok() }
 }
 
-fn show_own(cmd: SHOW_WINDOW_CMD) {
+pub fn show_own(cmd: SHOW_WINDOW_CMD) {
     if let Some(h) = own_window() {
         unsafe {
             let _ = ShowWindow(h, cmd);

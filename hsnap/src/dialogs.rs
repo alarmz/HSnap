@@ -14,6 +14,10 @@ pub enum Dialog {
     CaptureSettings { tab: usize, draft: Box<Settings> },
     HotKeys { draft: Box<Settings>, recording: Option<usize> },
     About,
+    Startup { draft: Box<Settings>, error: Option<String> },
+    PageSetup { draft: Box<crate::print::PageSetup>, prev: Box<crate::print_ui::Preview> },
+    PrintPreview { prev: Box<crate::print_ui::Preview>, page: usize },
+    Stamps(Box<crate::stamps_ui::Manager>),
 }
 
 const TABS: [&str; 5] = ["Capture", "Region", "View & Edit", "Copy & Print", "QuickSave"];
@@ -27,6 +31,10 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         Dialog::Scale { w, h, keep } => scale(app, ctx, w, h, keep),
         Dialog::CaptureSettings { tab, draft } => capture_settings(app, ctx, tab, draft),
         Dialog::HotKeys { draft, recording } => hot_keys(app, ctx, draft, recording),
+        Dialog::Startup { draft, error } => startup(app, ctx, draft, error),
+        Dialog::PageSetup { draft, prev } => crate::print_ui::page_setup(app, ctx, draft, prev),
+        Dialog::Stamps(m) => crate::stamps_ui::stamps(app, ctx, m),
+        Dialog::PrintPreview { prev, page } => crate::print_ui::print_preview(app, ctx, prev, page),
     };
     // A handler may have opened a different dialog; do not clobber it.
     if keep_open && matches!(app.dialog, Dialog::None) {
@@ -151,7 +159,8 @@ fn capture_settings(app: &mut App, ctx: &egui::Context, tab: &mut usize, d: &mut
             }
             3 => {
                 ui.checkbox(&mut d.auto_copy, "Automatically copy each capture to the clipboard");
-                ui.weak("Automatic print is not implemented.");
+                ui.checkbox(&mut d.auto_print, "Automatically print each capture");
+                ui.add_enabled(d.auto_print, egui::Checkbox::new(&mut d.auto_print_prompt, "Prompt for printer (otherwise the default printer is used)"));
             }
             _ => {
                 ui.checkbox(&mut d.quicksave, "Automatically save each capture");
@@ -282,6 +291,56 @@ fn hot_keys(app: &mut App, ctx: &egui::Context, d: &mut Settings, recording: &mu
                 d.hotkeys.push(def);
             }
         }
+    }
+    open && !ok && !cancel
+}
+
+fn startup(app: &mut App, ctx: &egui::Context, d: &mut Settings, error: &mut Option<String>) -> bool {
+    let mut open = true;
+    let (mut ok, mut cancel) = (false, false);
+    egui::Window::new("Startup and Tray Icon").open(&mut open).collapsible(false).resizable(false).show(ctx, |ui| {
+        ui.checkbox(&mut d.autostart, "Auto-Start with Windows");
+        ui.add_enabled(d.autostart, egui::Checkbox::new(&mut d.autostart_all_users, "For all users of this computer (needs administrator rights)"));
+        ui.checkbox(&mut d.start_minimized, "Always start minimized");
+        ui.checkbox(&mut d.show_tray, "Display system tray icon");
+        ui.add_enabled(d.show_tray, egui::Checkbox::new(&mut d.keep_in_tray, "Do not exit when the close button is clicked"));
+        ui.horizontal(|ui| {
+            ui.label("Number of most recent files on File menu");
+            ui.add(egui::DragValue::new(&mut d.recent_count).range(0..=16));
+        });
+        if let Some(e) = error.as_ref() {
+            ui.colored_label(Color32::from_rgb(220, 60, 60), e);
+        }
+        ui.separator();
+        ui.horizontal(|ui| {
+            ok = ui.button("OK").clicked();
+            cancel = ui.button("Cancel").clicked();
+        });
+    });
+    if ok {
+        let exe = std::env::current_exe().unwrap_or_default();
+        let prev = app.settings();
+        let mut result = Ok(());
+        // Drop the old entry if its scope changed, then apply the wanted state.
+        if prev.autostart && prev.autostart_all_users != d.autostart_all_users {
+            result = crate::startup::set_enabled("HSnap", false, prev.autostart_all_users, &exe);
+        }
+        if result.is_ok() {
+            result = crate::startup::set_enabled("HSnap", d.autostart, d.autostart_all_users, &exe);
+        }
+        if let Err(e) = result {
+            *error = Some(e);
+            return true; // stay open so the message is seen
+        }
+        let mut s = app.settings();
+        s.autostart = d.autostart;
+        s.autostart_all_users = d.autostart_all_users;
+        s.start_minimized = d.start_minimized;
+        s.show_tray = d.show_tray;
+        s.keep_in_tray = d.keep_in_tray;
+        s.recent_count = d.recent_count;
+        s.recent.truncate(d.recent_count as usize);
+        app.apply_settings(s);
     }
     open && !ok && !cancel
 }

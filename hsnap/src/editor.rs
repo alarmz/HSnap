@@ -381,18 +381,73 @@ pub fn fill_rect(img: &mut RgbaImage, x: u32, y: u32, w: u32, h: u32, color: [u8
     }
 }
 
+/// The UI font used for drawn text and stamps, read once.
 fn load_font() -> Option<FontArc> {
-    for p in [r"C:\Windows\Fonts\segoeui.ttf", r"C:\Windows\Fonts\arial.ttf"] {
-        if let Ok(bytes) = std::fs::read(p) {
-            if let Ok(f) = FontArc::try_from_vec(bytes) {
-                return Some(f);
+    static FONT: std::sync::OnceLock<Option<FontArc>> = std::sync::OnceLock::new();
+    FONT.get_or_init(|| {
+        for p in [r"C:\Windows\Fonts\segoeui.ttf", r"C:\Windows\Fonts\arial.ttf"] {
+            if let Ok(bytes) = std::fs::read(p) {
+                if let Ok(f) = FontArc::try_from_vec(bytes) {
+                    return Some(f);
+                }
             }
         }
-    }
-    None
+        None
+    })
+    .clone()
 }
 
-fn draw_text(img: &mut RgbaImage, p: Pt, text: &str, size: f32, c: Rgba<u8>) {
+/// Advance width of `text` at pixel size `size`.
+pub fn text_width(size: f32, text: &str) -> f32 {
+    match load_font() {
+        Some(f) => {
+            let s = f.as_scaled(PxScale::from(size));
+            text.chars().map(|c| s.h_advance(s.glyph_id(c))).sum()
+        }
+        None => text.chars().count() as f32 * size * 0.5,
+    }
+}
+
+/// Height of one text line at pixel size `size`.
+pub fn line_height(size: f32) -> f32 {
+    match load_font() {
+        Some(f) => f.as_scaled(PxScale::from(size)).height() * 1.1,
+        None => size * 1.3,
+    }
+}
+
+/// Greedy word wrap to `max_w` pixels; explicit newlines are kept, over-long words are split.
+pub fn wrap_text(size: f32, text: &str, max_w: f32) -> Vec<String> {
+    let mut lines = vec![];
+    for para in text.split('\n') {
+        let mut cur = String::new();
+        for word in para.split_whitespace() {
+            let candidate = if cur.is_empty() { word.to_string() } else { format!("{cur} {word}") };
+            if text_width(size, &candidate) <= max_w || cur.is_empty() && candidate.chars().count() <= 1 {
+                cur = candidate;
+                continue;
+            }
+            if !cur.is_empty() {
+                lines.push(std::mem::take(&mut cur));
+            }
+            // A single word wider than the line is broken by characters.
+            let mut piece = String::new();
+            for ch in word.chars() {
+                piece.push(ch);
+                if text_width(size, &piece) > max_w && piece.chars().count() > 1 {
+                    let last = piece.pop().unwrap();
+                    lines.push(std::mem::take(&mut piece));
+                    piece.push(last);
+                }
+            }
+            cur = piece;
+        }
+        lines.push(cur);
+    }
+    lines
+}
+
+pub fn draw_text(img: &mut RgbaImage, p: Pt, text: &str, size: f32, c: Rgba<u8>) {
     let Some(font) = load_font() else { return };
     let scaled = font.as_scaled(PxScale::from(size));
     let mut x = p.0;
