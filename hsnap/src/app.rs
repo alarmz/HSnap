@@ -93,6 +93,7 @@ pub struct App {
     tray: Option<crate::tray::Tray>,
     quitting: Arc<AtomicBool>,
     first_frame: bool,
+    pub text_buffer: String,
 }
 
 impl App {
@@ -138,6 +139,7 @@ impl App {
             tray: None,
             quitting: Arc::new(AtomicBool::new(false)),
             first_frame: true,
+            text_buffer: String::new(),
         }
     }
 
@@ -207,7 +209,31 @@ impl App {
         self.hotkeys.registered.lock().unwrap().clone()
     }
 
+    /// A TextSnap result: always to the clipboard, optionally into the text window.
+    fn on_text(&mut self, text: String) {
+        let s = self.settings();
+        if let Ok(mut cb) = arboard::Clipboard::new() {
+            let _ = cb.set_text(text.clone());
+        }
+        if s.text_show_window {
+            if s.text_append && !self.text_buffer.is_empty() {
+                self.text_buffer.push_str("
+
+");
+                self.text_buffer.push_str(&text);
+            } else {
+                self.text_buffer = text.clone();
+            }
+            self.dialog = Dialog::Text;
+        }
+        self.status = format!("Text captured ({} characters) and copied to the clipboard", text.chars().count());
+    }
+
     fn on_capture(&mut self, mut c: Captured) {
+        if let Some(t) = c.text.take() {
+            self.on_text(t);
+            return;
+        }
         let s = self.settings();
         let store = crate::stamps::Store { dir: std::path::PathBuf::from(&s.stamps_dir) };
         for st in store.list().into_iter().filter(|st| st.auto_add) {
@@ -816,13 +842,23 @@ impl App {
                 todo_item(ui, "Unique Colors");
             });
             ui.menu_button("TextSnap", |ui| {
-                todo_item(ui, "Text from a Region");
-                todo_item(ui, "Text from an Object under Cursor");
-                todo_item(ui, "Text from a window with auto-scroll");
-                todo_item(ui, "Text from a region with auto-scroll");
+                self.capture_item(ui, "Text from a Region	Ctrl+Shift+T", CaptureMode::TextRegion);
+                self.capture_item(ui, "Text from an Object under Cursor	Ctrl+Shift+U", CaptureMode::TextObject);
+                self.capture_item(ui, "Text from a window with auto-scroll", CaptureMode::TextWindowScroll);
+                self.capture_item(ui, "Text from a region with auto-scroll", CaptureMode::TextRegionScroll);
+                if ui.button("Show Captured Text").clicked() {
+                    ui.close_menu();
+                    self.dialog = Dialog::Text;
+                }
                 ui.separator();
-                todo_item(ui, "TextSnap Settings…");
-                todo_item(ui, "TextSnap Hot Keys…");
+                if ui.button("TextSnap Settings…").clicked() {
+                    ui.close_menu();
+                    self.dialog = Dialog::CaptureSettings { tab: 5, draft: Box::new(self.settings()) };
+                }
+                if ui.button("TextSnap Hot Keys…").clicked() {
+                    ui.close_menu();
+                    self.dialog = Dialog::HotKeys { draft: Box::new(self.settings()), recording: None };
+                }
             });
             ui.menu_button("Options", |ui| {
                 let mut s = self.settings();

@@ -15,19 +15,23 @@ pub enum HotkeyAction {
     Region,
     MultiRegion,
     ScrollPage,
+    TextRegion,
+    TextObject,
     Cursor,
     RepeatLast,
     StopAuto,
 }
 
 impl HotkeyAction {
-    pub const ALL: [HotkeyAction; 9] = [
+    pub const ALL: [HotkeyAction; 11] = [
         HotkeyAction::FullScreen,
         HotkeyAction::Window,
         HotkeyAction::ActiveWindow,
         HotkeyAction::Region,
         HotkeyAction::MultiRegion,
         HotkeyAction::ScrollPage,
+        HotkeyAction::TextRegion,
+        HotkeyAction::TextObject,
         HotkeyAction::Cursor,
         HotkeyAction::RepeatLast,
         HotkeyAction::StopAuto,
@@ -40,6 +44,8 @@ impl HotkeyAction {
             HotkeyAction::Region => "Region",
             HotkeyAction::MultiRegion => "Multi-region",
             HotkeyAction::ScrollPage => "Entire page with scrolling",
+            HotkeyAction::TextRegion => "Text from a region (TextSnap)",
+            HotkeyAction::TextObject => "Text from an object under cursor (TextSnap)",
             HotkeyAction::Cursor => "Mouse cursor only",
             HotkeyAction::RepeatLast => "Repeat last capture",
             HotkeyAction::StopAuto => "Stop auto-capture",
@@ -87,6 +93,8 @@ pub fn defaults() -> Vec<(HotkeyAction, Binding)> {
         (HotkeyAction::Region, cs('R')),
         (HotkeyAction::MultiRegion, cs('M')),
         (HotkeyAction::ScrollPage, cs('S')),
+        (HotkeyAction::TextRegion, cs('T')),
+        (HotkeyAction::TextObject, cs('U')),
         (HotkeyAction::Cursor, cs('C')),
         (HotkeyAction::RepeatLast, cs('L')),
         (HotkeyAction::StopAuto, Binding { ctrl: false, shift: true, alt: false, vk: VK_F11.0 as u32 }),

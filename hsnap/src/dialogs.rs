@@ -18,9 +18,10 @@ pub enum Dialog {
     PageSetup { draft: Box<crate::print::PageSetup>, prev: Box<crate::print_ui::Preview> },
     PrintPreview { prev: Box<crate::print_ui::Preview>, page: usize },
     Stamps(Box<crate::stamps_ui::Manager>),
+    Text,
 }
 
-const TABS: [&str; 5] = ["Capture", "Region", "View & Edit", "Copy & Print", "QuickSave"];
+const TABS: [&str; 6] = ["Capture", "Region", "View & Edit", "Copy & Print", "QuickSave", "TextSnap"];
 
 pub fn show(app: &mut App, ctx: &egui::Context) {
     let mut dialog = std::mem::replace(&mut app.dialog, Dialog::None);
@@ -34,6 +35,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         Dialog::Startup { draft, error } => startup(app, ctx, draft, error),
         Dialog::PageSetup { draft, prev } => crate::print_ui::page_setup(app, ctx, draft, prev),
         Dialog::Stamps(m) => crate::stamps_ui::stamps(app, ctx, m),
+        Dialog::Text => text_window(app, ctx),
         Dialog::PrintPreview { prev, page } => crate::print_ui::print_preview(app, ctx, prev, page),
     };
     // A handler may have opened a different dialog; do not clobber it.
@@ -161,6 +163,30 @@ fn capture_settings(app: &mut App, ctx: &egui::Context, tab: &mut usize, d: &mut
                 ui.checkbox(&mut d.auto_copy, "Automatically copy each capture to the clipboard");
                 ui.checkbox(&mut d.auto_print, "Automatically print each capture");
                 ui.add_enabled(d.auto_print, egui::Checkbox::new(&mut d.auto_print_prompt, "Prompt for printer (otherwise the default printer is used)"));
+            }
+            5 => {
+                ui.label("Text is read through UI Automation where the target exposes it, and by Windows OCR otherwise.");
+                ui.radio_value(&mut d.text_mode, crate::textsnap::TextMode::Plain, "Plain text");
+                ui.radio_value(&mut d.text_mode, crate::textsnap::TextMode::TabDelimited, "Tab-delimited data (tables; paste into a spreadsheet)");
+                ui.add_enabled(false, egui::Checkbox::new(&mut false, "Formatted text (RTF)")).on_disabled_hover_text("Not available: neither OCR nor UI Automation reports fonts");
+                ui.separator();
+                ui.checkbox(&mut d.text_show_window, "Show captured text in a window");
+                ui.add_enabled(d.text_show_window, egui::Checkbox::new(&mut d.text_append, "Append new text to the same window"));
+                ui.horizontal(|ui| {
+                    ui.label("Additional delay for Text from an Object under Cursor (ms)");
+                    ui.add(egui::DragValue::new(&mut d.text_delay_ms).range(0..=30_000).speed(50));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("OCR language");
+                    let shown = if d.ocr_lang.is_empty() { "Windows default".to_string() } else { d.ocr_lang.clone() };
+                    egui::ComboBox::from_id_salt("ocr-lang").selected_text(shown).show_ui(ui, |ui| {
+                        ui.selectable_value(&mut d.ocr_lang, String::new(), "Windows default");
+                        for l in ocr_languages() {
+                            ui.selectable_value(&mut d.ocr_lang, l.clone(), l.clone());
+                        }
+                    });
+                });
+                ui.weak("Auto-scroll for objects under the cursor is not implemented.");
             }
             _ => {
                 ui.checkbox(&mut d.quicksave, "Automatically save each capture");
@@ -343,4 +369,32 @@ fn startup(app: &mut App, ctx: &egui::Context, d: &mut Settings, error: &mut Opt
         app.apply_settings(s);
     }
     open && !ok && !cancel
+}
+
+/// Installed OCR language tags, looked up once.
+fn ocr_languages() -> &'static Vec<String> {
+    static LANGS: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+    LANGS.get_or_init(crate::ocr::available_languages)
+}
+
+fn text_window(app: &mut App, ctx: &egui::Context) -> bool {
+    let mut open = true;
+    let mut clear = false;
+    egui::Window::new("Captured Text").open(&mut open).default_size([480.0, 320.0]).show(ctx, |ui| {
+        ui.horizontal(|ui| {
+            if ui.button("Copy").clicked() {
+                if let Ok(mut cb) = arboard::Clipboard::new() {
+                    let _ = cb.set_text(app.text_buffer.clone());
+                }
+            }
+            clear = ui.button("Clear").clicked();
+        });
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.add(egui::TextEdit::multiline(&mut app.text_buffer).desired_width(f32::INFINITY).desired_rows(14));
+        });
+    });
+    if clear {
+        app.text_buffer.clear();
+    }
+    open
 }

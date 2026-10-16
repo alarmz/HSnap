@@ -31,6 +31,10 @@ pub enum CaptureMode {
     Multi,
     Pan,
     Scroll,
+    TextRegion,
+    TextObject,
+    TextWindowScroll,
+    TextRegionScroll,
     Cursor,
 }
 
@@ -75,6 +79,11 @@ pub struct Settings {
     pub auto_print: bool,
     pub auto_print_prompt: bool,
     pub stamps_dir: String,
+    pub text_mode: crate::textsnap::TextMode,
+    pub text_show_window: bool,
+    pub text_append: bool,
+    pub text_delay_ms: u64,
+    pub ocr_lang: String,
 }
 
 /// What happens with each new capture (View & Edit tab).
@@ -127,6 +136,11 @@ impl Default for Settings {
             auto_print: false,
             auto_print_prompt: true,
             stamps_dir: crate::stamps::Store::default_dir().to_string_lossy().into_owned(),
+            text_mode: Default::default(),
+            text_show_window: true,
+            text_append: true,
+            text_delay_ms: 0,
+            ocr_lang: String::new(),
         }
     }
 }
@@ -170,6 +184,8 @@ impl Settings {
 pub struct Captured {
     pub img: RgbaImage,
     pub label: &'static str,
+    /// Set for TextSnap captures: the recognised text (the image is then a 1x1 placeholder).
+    pub text: Option<String>,
 }
 
 #[derive(Clone, Copy)]
@@ -208,6 +224,8 @@ impl Service {
             HotkeyAction::Cursor => self.capture(CaptureMode::Cursor),
             HotkeyAction::MultiRegion => self.capture(CaptureMode::Multi),
             HotkeyAction::ScrollPage => self.capture(CaptureMode::Scroll),
+            HotkeyAction::TextRegion => self.capture(CaptureMode::TextRegion),
+            HotkeyAction::TextObject => self.capture(CaptureMode::TextObject),
             HotkeyAction::RepeatLast => self.repeat_last(),
             HotkeyAction::StopAuto => self.auto_running.store(false, Ordering::Relaxed),
         }
@@ -258,7 +276,8 @@ impl Service {
 
     fn run_once(&self, what: Last, remember: bool) {
         let s = self.settings.lock().unwrap().clone();
-        let hide = s.hide_window;
+        // Reading the object under the pointer must not disturb it (a menu would close).
+        let hide = s.hide_window && !matches!(what, Last::Mode(CaptureMode::TextObject));
         let was_visible = hide && own_window().is_some_and(|h| unsafe { !IsIconic(h).as_bool() });
         if was_visible {
             show_own(SW_MINIMIZE);
@@ -266,6 +285,29 @@ impl Service {
         if was_visible || s.delay_ms > 0 {
             // Give the minimise animation time to finish, then honour the delay.
             std::thread::sleep(Duration::from_millis(s.delay_ms + if was_visible { 400 } else { 0 }));
+        }
+        if let Last::Mode(m @ (CaptureMode::TextRegion | CaptureMode::TextObject | CaptureMode::TextWindowScroll | CaptureMode::TextRegionScroll)) = what {
+            let res = capture_text(m, &s);
+            if was_visible && s.restore_window {
+                show_own(SW_RESTORE);
+            }
+            match res {
+                Ok(text) => {
+                    if s.play_sound {
+                        unsafe {
+                            let _ = windows::Win32::System::Diagnostics::Debug::MessageBeep(MB_OK);
+                        }
+                    }
+                    let _ = self.tx.send(Captured { img: RgbaImage::new(1, 1), label: "Text", text: Some(text) });
+                    self.ctx.request_repaint();
+                }
+                Err(e) if e == "cancelled" => {}
+                Err(e) => {
+                    let _ = self.tx.send(Captured { img: RgbaImage::new(1, 1), label: "Text", text: Some(format!("[TextSnap] {e}")) });
+                    self.ctx.request_repaint();
+                }
+            }
+            return;
         }
         let pan = self.last.lock().unwrap().and_then(|(l, _)| match l {
             Last::Rect(r) => Some((r.w, r.h)),
@@ -288,7 +330,7 @@ impl Service {
                 if remember {
                     *self.last.lock().unwrap() = Some((last, label));
                 }
-                let _ = self.tx.send(Captured { img, label });
+                let _ = self.tx.send(Captured { img, label, text: None });
                 self.ctx.request_repaint();
             }
             Err(e) if e == "cancelled" => {}
@@ -324,6 +366,8 @@ fn capture_mode(m: CaptureMode, s: &Settings, pan: Option<(i32, i32)>) -> Result
         CaptureMode::Active => (capture::capture_active_window(cur)?, Last::Mode(m), "Active window"),
         CaptureMode::ActiveNoFrame => (capture::capture_active_client(cur)?, Last::Mode(m), "Active window without frame"),
         CaptureMode::Cursor => (capture::capture_cursor_only(s.background)?, Last::Mode(m), "Cursor"),
+        // Text modes are handled before this function (they produce text, not an image).
+        CaptureMode::TextRegion | CaptureMode::TextObject | CaptureMode::TextWindowScroll | CaptureMode::TextRegionScroll => return Err("text capture has no image".into()),
         CaptureMode::Scroll => {
             let (_, click) = run_picker(picker::Mode::ScrollTarget, s, None)?;
             let pt = click.ok_or("no click position")?;
@@ -344,6 +388,27 @@ fn capture_mode(m: CaptureMode, s: &Settings, pan: Option<(i32, i32)>) -> Result
             (img, rect.map(Last::Rect).unwrap_or(Last::Mode(m)), label)
         }
     })
+}
+
+/// TextSnap: text from a region, the object under the pointer, or a scrolled window/region.
+fn capture_text(m: CaptureMode, s: &Settings) -> Result<String, String> {
+    let from_img = |img: &RgbaImage| crate::textsnap::from_image(img, &s.ocr_lang, s.text_mode);
+    let text = match m {
+        CaptureMode::TextRegion => from_img(&run_picker(picker::Mode::Region, s, None)?.0)?,
+        CaptureMode::TextObject => {
+            std::thread::sleep(Duration::from_millis(s.text_delay_ms));
+            crate::textsnap::from_object(capture::cursor_pos(), &s.ocr_lang, s.text_mode)?
+        }
+        CaptureMode::TextWindowScroll => {
+            let click = run_picker(picker::Mode::ScrollTarget, s, None)?.1.ok_or("no click position")?;
+            from_img(&scroll::capture_scrolling((click.x, click.y), s.scroll_refresh_ms, s.scroll_max_height)?)?
+        }
+        _ => {
+            let rect = run_picker(picker::Mode::Region, s, None)?.1.ok_or("no region")?;
+            from_img(&scroll::capture_scrolling_rect(rect, s.scroll_refresh_ms, s.scroll_max_height)?)?
+        }
+    };
+    if text.trim().is_empty() { Err("no text found".into()) } else { Ok(text) }
 }
 
 /// Runs the selection overlay in a child process; returns its image and screen rectangle.

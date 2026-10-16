@@ -7,6 +7,7 @@ mod capture;
 mod compose;
 mod editor;
 mod hotkeys;
+mod ocr;
 mod picker;
 mod print;
 mod print_gdi;
@@ -18,6 +19,7 @@ mod stamps;
 mod stamps_ui;
 mod startup;
 mod stitch;
+mod textsnap;
 mod tray;
 
 fn main() {
@@ -76,6 +78,52 @@ fn main() {
             let target = print_gdi::Target::Named { printer: args[2].clone(), output: Some(args[3].clone().into()) };
             match print_gdi::print_image(&img, &setup, "test.png", target) {
                 Ok(()) => println!("printed to {}", args[3]),
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        // Headless text tests: hsnap --cli-ocr <png> [lang]  |  hsnap --cli-text <x> <y>
+        Some("--cli-ocr") if args.len() >= 2 => {
+            let img = image::open(&args[1]).map(|i| i.to_rgba8()).unwrap_or_else(|e| {
+                eprintln!("error: {e}");
+                std::process::exit(1)
+            });
+            println!("languages: {:?}", ocr::available_languages());
+            let mode = if std::env::var("HSNAP_TABS").is_ok() { textsnap::TextMode::TabDelimited } else { textsnap::TextMode::Plain };
+            match textsnap::from_image(&img, args.get(2).map_or("", String::as_str), mode) {
+                Ok(t) => println!("---
+{t}
+---"),
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        Some("--cli-text") if args.len() >= 3 => {
+            let (x, y) = (args[1].parse().unwrap_or(0), args[2].parse().unwrap_or(0));
+            match textsnap::from_object((x, y), "", textsnap::TextMode::Plain) {
+                Ok(t) => println!("---
+{t}
+---"),
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        // hsnap --cli-text-window <class or -> <title>: UI Automation text of a window found by title
+        Some("--cli-text-window") if args.len() >= 3 => {
+            use windows::core::PCWSTR;
+            let wide = |s: &str| s.encode_utf16().chain(Some(0)).collect::<Vec<u16>>();
+            let (class, title) = (wide(&args[1]), wide(&args[2]));
+            let hwnd = unsafe { windows::Win32::UI::WindowsAndMessaging::FindWindowW(if args[1] == "-" { PCWSTR::null() } else { PCWSTR(class.as_ptr()) }, PCWSTR(title.as_ptr())) };
+            match hwnd.map_err(|e| e.to_string()).and_then(textsnap::text_of_window) {
+                Ok(t) => println!("---
+{t}
+---"),
                 Err(e) => {
                     eprintln!("error: {e}");
                     std::process::exit(1);

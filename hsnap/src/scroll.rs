@@ -64,6 +64,19 @@ pub fn capture_scrolling(pt: (i32, i32), refresh_ms: u64, max_height: u32) -> Re
     result
 }
 
+/// Like `capture_scrolling`, but for an explicit region chosen by the user.
+pub fn capture_scrolling_rect(view: Rect, refresh_ms: u64, max_height: u32) -> Result<RgbaImage, String> {
+    let mut saved = POINT::default();
+    unsafe {
+        let _ = GetCursorPos(&mut saved);
+    }
+    let result = run(view, refresh_ms, max_height);
+    unsafe {
+        let _ = SetCursorPos(saved.x, saved.y);
+    }
+    result
+}
+
 fn run(view: Rect, refresh_ms: u64, max_height: u32) -> Result<RgbaImage, String> {
     let pause = Duration::from_millis(refresh_ms.max(50));
     // The wheel acts on the window under the pointer, so park it in the middle of the view.
