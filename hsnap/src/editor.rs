@@ -12,7 +12,11 @@ pub enum Kind {
     Line(Pt, Pt),
     Arrow(Pt, Pt),
     Rect(Pt, Pt),
+    RoundRect(Pt, Pt),
     Ellipse(Pt, Pt),
+    FilledRect(Pt, Pt),
+    FilledRoundRect(Pt, Pt),
+    FilledEllipse(Pt, Pt),
     Text(Pt, String),
 }
 
@@ -32,6 +36,7 @@ struct Snapshot {
 pub struct Document {
     pub name: String,
     pub modified: bool,
+    pub path: Option<std::path::PathBuf>,
     cur: Snapshot,
     undo: Vec<Snapshot>,
     redo: Vec<Snapshot>,
@@ -42,6 +47,7 @@ impl Document {
         Self {
             name: name.into(),
             modified: false,
+            path: None,
             cur: Snapshot { img: Arc::new(img), shapes: vec![] },
             undo: vec![],
             redo: vec![],
@@ -51,6 +57,7 @@ impl Document {
     pub fn image(&self) -> &RgbaImage {
         &self.cur.img
     }
+    #[cfg(test)]
     pub fn shapes(&self) -> &[Shape] {
         &self.cur.shapes
     }
@@ -111,6 +118,14 @@ impl Document {
         let flat = self.flatten();
         self.checkpoint();
         self.cur.img = Arc::new(imageops::flip_horizontal(&flat));
+        self.cur.shapes.clear();
+    }
+
+    /// Replace the bitmap with `f(flattened bitmap)`; one undo step.
+    pub fn transform(&mut self, f: impl FnOnce(RgbaImage) -> RgbaImage) {
+        let flat = self.flatten();
+        self.checkpoint();
+        self.cur.img = Arc::new(f(flat));
         self.cur.shapes.clear();
     }
 
@@ -181,6 +196,23 @@ fn draw_shape(img: &mut RgbaImage, s: &Shape) {
             line(img, (r, bt), (l, bt), s.width, c);
             line(img, (l, bt), (l, t), s.width, c);
         }
+        Kind::RoundRect(a, b) => {
+            let path = round_rect_path(*a, *b);
+            for w in path.windows(2) {
+                line(img, w[0], w[1], s.width, c);
+            }
+        }
+        Kind::FilledRect(a, b) => fill_where(img, *a, *b, c, |_, _| true),
+        Kind::FilledRoundRect(a, b) => {
+            let (l, t, r, bt) = bounds(*a, *b);
+            let rad = ((r - l).min(bt - t) / 5.0).max(1.0);
+            fill_where(img, *a, *b, c, |x, y| in_round_rect(x, y, l, t, r, bt, rad));
+        }
+        Kind::FilledEllipse(a, b) => {
+            let (cx, cy) = ((a.0 + b.0) / 2.0, (a.1 + b.1) / 2.0);
+            let (rx, ry) = (((a.0 - b.0).abs() / 2.0).max(0.5), ((a.1 - b.1).abs() / 2.0).max(0.5));
+            fill_where(img, *a, *b, c, |x, y| ((x - cx) / rx).powi(2) + ((y - cy) / ry).powi(2) <= 1.0);
+        }
         Kind::Ellipse(a, b) => {
             let (cx, cy) = ((a.0 + b.0) / 2.0, (a.1 + b.1) / 2.0);
             let (rx, ry) = ((a.0 - b.0).abs() / 2.0, (a.1 - b.1).abs() / 2.0);
@@ -194,6 +226,158 @@ fn draw_shape(img: &mut RgbaImage, s: &Shape) {
             }
         }
         Kind::Text(p, text) => draw_text(img, *p, text, s.width.max(1.0) * 6.0, c),
+    }
+}
+
+fn bounds(a: Pt, b: Pt) -> (f32, f32, f32, f32) {
+    (a.0.min(b.0), a.1.min(b.1), a.0.max(b.0), a.1.max(b.1))
+}
+
+fn fill_where(img: &mut RgbaImage, a: Pt, b: Pt, c: Rgba<u8>, inside: impl Fn(f32, f32) -> bool) {
+    let (l, t, r, bt) = bounds(a, b);
+    for y in t.floor() as i32..=bt.ceil() as i32 {
+        for x in l.floor() as i32..=r.ceil() as i32 {
+            if inside(x as f32 + 0.5, y as f32 + 0.5) {
+                put(img, x, y, c);
+            }
+        }
+    }
+}
+
+fn in_round_rect(x: f32, y: f32, l: f32, t: f32, r: f32, b: f32, rad: f32) -> bool {
+    if x < l || x > r || y < t || y > b {
+        return false;
+    }
+    let cx = x.clamp(l + rad, r - rad);
+    let cy = y.clamp(t + rad, b - rad);
+    (x - cx).powi(2) + (y - cy).powi(2) <= rad * rad
+}
+
+fn round_rect_path(a: Pt, b: Pt) -> Vec<Pt> {
+    let (l, t, r, bt) = bounds(a, b);
+    let rad = ((r - l).min(bt - t) / 5.0).max(1.0);
+    let mut v = vec![];
+    // Four corner arcs, each sampled in 8 steps, walked clockwise from top-left.
+    for (cx, cy, start) in [(l + rad, t + rad, 180.0f32), (r - rad, t + rad, 270.0), (r - rad, bt - rad, 0.0), (l + rad, bt - rad, 90.0)] {
+        for i in 0..=8 {
+            let ang = (start + i as f32 * 90.0 / 8.0).to_radians();
+            v.push((cx + rad * ang.cos(), cy + rad * ang.sin()));
+        }
+    }
+    v.push(v[0]);
+    v
+}
+
+// ---- raster operations (applied to the flattened bitmap) ----
+
+/// Bucket fill: replace the contiguous region matching the clicked pixel.
+pub fn flood_fill(img: &mut RgbaImage, x: u32, y: u32, color: [u8; 4]) {
+    if x >= img.width() || y >= img.height() {
+        return;
+    }
+    let target = *img.get_pixel(x, y);
+    let new = Rgba(color);
+    if target == new {
+        return;
+    }
+    let mut stack = vec![(x, y)];
+    while let Some((px, py)) = stack.pop() {
+        if *img.get_pixel(px, py) != target {
+            continue;
+        }
+        img.put_pixel(px, py, new);
+        if px > 0 { stack.push((px - 1, py)); }
+        if py > 0 { stack.push((px, py - 1)); }
+        if px + 1 < img.width() { stack.push((px + 1, py)); }
+        if py + 1 < img.height() { stack.push((px, py + 1)); }
+    }
+}
+
+/// Erase along a stroke to the background colour.
+pub fn erase_stroke(img: &mut RgbaImage, pts: &[Pt], width: f32, bg: [u8; 4]) {
+    for w in pts.windows(2) {
+        line(img, w[0], w[1], width, Rgba(bg));
+    }
+    if pts.len() == 1 {
+        disc(img, pts[0].0, pts[0].1, width / 2.0, Rgba(bg));
+    }
+}
+
+/// Spray paint: random dots inside a disc around each stroke point.
+pub fn airbrush(img: &mut RgbaImage, pts: &[Pt], width: f32, color: [u8; 4], seed: &mut u64) {
+    let mut rnd = || {
+        *seed ^= *seed << 13;
+        *seed ^= *seed >> 7;
+        *seed ^= *seed << 17;
+        (*seed >> 11) as f32 / (1u64 << 53) as f32
+    };
+    let r = width.max(2.0) * 2.0;
+    for p in pts {
+        for _ in 0..(r * 1.5) as i32 {
+            let (ang, d) = (rnd() * std::f32::consts::TAU, rnd().sqrt() * r);
+            put(img, (p.0 + d * ang.cos()) as i32, (p.1 + d * ang.sin()) as i32, Rgba(color));
+        }
+    }
+}
+
+pub fn grayscale(mut img: RgbaImage) -> RgbaImage {
+    for p in img.pixels_mut() {
+        let g = (0.299 * p[0] as f32 + 0.587 * p[1] as f32 + 0.114 * p[2] as f32) as u8;
+        p[0] = g; p[1] = g; p[2] = g;
+    }
+    img
+}
+
+pub fn invert(mut img: RgbaImage) -> RgbaImage {
+    for p in img.pixels_mut() {
+        p[0] = 255 - p[0]; p[1] = 255 - p[1]; p[2] = 255 - p[2];
+    }
+    img
+}
+
+pub fn black_and_white(mut img: RgbaImage) -> RgbaImage {
+    for p in img.pixels_mut() {
+        let g = 0.299 * p[0] as f32 + 0.587 * p[1] as f32 + 0.114 * p[2] as f32;
+        let v = if g >= 128.0 { 255 } else { 0 };
+        p[0] = v; p[1] = v; p[2] = v;
+    }
+    img
+}
+
+/// Remove uniform borders matching the top-left pixel colour.
+pub fn auto_trim(img: RgbaImage) -> RgbaImage {
+    let (w, h) = img.dimensions();
+    if w == 0 || h == 0 {
+        return img;
+    }
+    let bg = *img.get_pixel(0, 0);
+    let (mut x0, mut y0, mut x1, mut y1) = (w, h, 0, 0);
+    for (x, y, p) in img.enumerate_pixels() {
+        if *p != bg {
+            x0 = x0.min(x); y0 = y0.min(y); x1 = x1.max(x); y1 = y1.max(y);
+        }
+    }
+    if x1 < x0 || y1 < y0 {
+        return img; // nothing but background
+    }
+    imageops::crop_imm(&img, x0, y0, x1 - x0 + 1, y1 - y0 + 1).to_image()
+}
+
+pub fn scale(img: RgbaImage, new_w: u32, new_h: u32) -> RgbaImage {
+    imageops::resize(&img, new_w.max(1), new_h.max(1), imageops::FilterType::Lanczos3)
+}
+
+/// Paste `src` at (x, y), clipping to the destination.
+pub fn paste(dst: &mut RgbaImage, src: &RgbaImage, x: i64, y: i64) {
+    imageops::replace(dst, src, x, y);
+}
+
+/// Fill a pixel rectangle with a colour (Clear / Cut).
+pub fn fill_rect(img: &mut RgbaImage, x: u32, y: u32, w: u32, h: u32, color: [u8; 4]) {
+    for yy in y..(y + h).min(img.height()) {
+        for xx in x..(x + w).min(img.width()) {
+            img.put_pixel(xx, yy, Rgba(color));
+        }
     }
 }
 
@@ -271,6 +455,47 @@ mod tests {
         d.undo();
         assert_eq!(d.image().dimensions(), (20, 10));
         assert_eq!(d.shapes().len(), 1);
+    }
+
+    #[test]
+    fn flood_fill_stays_inside_boundary() {
+        let mut img = RgbaImage::from_pixel(10, 10, Rgba([255, 255, 255, 255]));
+        for y in 0..10 {
+            img.put_pixel(5, y, Rgba([0, 0, 0, 255]));
+        }
+        flood_fill(&mut img, 1, 1, [255, 0, 0, 255]);
+        assert_eq!(img.get_pixel(0, 9), &Rgba([255, 0, 0, 255]));
+        assert_eq!(img.get_pixel(7, 3), &Rgba([255, 255, 255, 255]));
+    }
+
+    #[test]
+    fn auto_trim_removes_border() {
+        let mut img = RgbaImage::from_pixel(10, 10, Rgba([255, 255, 255, 255]));
+        img.put_pixel(3, 4, Rgba([0, 0, 0, 255]));
+        img.put_pixel(6, 7, Rgba([0, 0, 0, 255]));
+        assert_eq!(auto_trim(img).dimensions(), (4, 4));
+    }
+
+    #[test]
+    fn colour_ops() {
+        let img = RgbaImage::from_pixel(2, 2, Rgba([200, 100, 0, 255]));
+        assert_eq!(invert(img.clone()).get_pixel(0, 0), &Rgba([55, 155, 255, 255]));
+        let g = grayscale(img.clone());
+        let p = g.get_pixel(0, 0);
+        assert!(p[0] == p[1] && p[1] == p[2]);
+        assert_eq!(black_and_white(RgbaImage::from_pixel(2, 2, Rgba([250, 200, 0, 255]))).get_pixel(0, 0), &Rgba([255, 255, 255, 255]));
+        assert_eq!(black_and_white(img).get_pixel(0, 0), &Rgba([0, 0, 0, 255]));
+    }
+
+    #[test]
+    fn filled_shapes_cover_interior_and_round_rect_clips_corner() {
+        let mut d = Document::new("t", RgbaImage::from_pixel(40, 40, Rgba([255, 255, 255, 255])));
+        d.add_shape(Shape { kind: Kind::FilledRect((5., 5.), (15., 15.)), color: [0, 0, 0, 255], width: 1.0 });
+        d.add_shape(Shape { kind: Kind::FilledRoundRect((20., 20.), (38., 38.)), color: [0, 0, 0, 255], width: 1.0 });
+        let img = d.flatten();
+        assert_eq!(img.get_pixel(10, 10), &Rgba([0, 0, 0, 255]));
+        assert_eq!(img.get_pixel(29, 29), &Rgba([0, 0, 0, 255]));
+        assert_eq!(img.get_pixel(20, 20), &Rgba([255, 255, 255, 255])); // rounded corner
     }
 
     #[test]

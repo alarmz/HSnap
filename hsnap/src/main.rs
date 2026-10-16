@@ -1,4 +1,6 @@
 mod app;
+mod dialogs;
+mod icons;
 mod capture;
 mod editor;
 mod hotkeys;
@@ -40,7 +42,7 @@ fn main() {
         }
         _ => {
             let opts = eframe::NativeOptions {
-                viewport: eframe::egui::ViewportBuilder::default().with_title(service::WINDOW_TITLE).with_inner_size([1000.0, 700.0]),
+                viewport: eframe::egui::ViewportBuilder::default().with_title(service::WINDOW_TITLE).with_inner_size([1000.0, 620.0]),
                 ..Default::default()
             };
             let _ = eframe::run_native(service::WINDOW_TITLE, opts, Box::new(|cc| Ok(Box::new(app::App::new(cc)))));

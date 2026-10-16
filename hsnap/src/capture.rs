@@ -221,3 +221,20 @@ pub fn capture_cursor_only(bg: [u8; 4]) -> Result<RgbaImage, String> {
     }
     Ok(img)
 }
+
+/// Client area of the foreground window, i.e. the window without its frame.
+pub fn capture_active_client(include_cursor: bool) -> Result<RgbaImage, String> {
+    let hwnd = unsafe { GetForegroundWindow() };
+    if hwnd.0.is_null() {
+        return Err("no active window".into());
+    }
+    let mut rc = RECT::default();
+    let mut origin = POINT::default();
+    unsafe {
+        GetClientRect(hwnd, &mut rc).map_err(|e| e.to_string())?;
+        if !ClientToScreen(hwnd, &mut origin).as_bool() {
+            return Err("ClientToScreen failed".into());
+        }
+    }
+    capture_rect(Rect { x: origin.x, y: origin.y, w: rc.right - rc.left, h: rc.bottom - rc.top }, include_cursor)
+}

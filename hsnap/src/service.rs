@@ -2,7 +2,7 @@
 //! hot keys keep working while the main window is minimised.
 
 use crate::capture::{self, Rect};
-use crate::hotkeys::HotkeyAction;
+use crate::hotkeys::{self, Binding, HotkeyAction};
 use eframe::egui;
 use image::RgbaImage;
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,7 @@ pub enum CaptureMode {
     Full,
     Virtual,
     Active,
+    ActiveNoFrame,
     Region,
     Window,
     Cursor,
@@ -43,6 +44,23 @@ pub struct Settings {
     pub quicksave_loop: bool,
     pub repeat_secs: f32,
     pub hotkeys_enabled: bool,
+    pub hotkeys: Vec<(HotkeyAction, Binding)>,
+    pub restore_window: bool,
+    pub play_sound: bool,
+    pub bg_transparent: bool,
+    pub mark_modified: bool,
+    pub only_if_changed: bool,
+    pub view_edit: ViewEdit,
+    pub show_region_help: bool,
+}
+
+/// What happens with each new capture (View & Edit tab).
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Debug)]
+pub enum ViewEdit {
+    #[default]
+    NewWindow,
+    Replace,
+    DoNotChange,
 }
 
 impl Default for Settings {
@@ -62,6 +80,14 @@ impl Default for Settings {
             quicksave_loop: false,
             repeat_secs: 20.0,
             hotkeys_enabled: true,
+            hotkeys: hotkeys::defaults(),
+            restore_window: true,
+            play_sound: false,
+            bg_transparent: false,
+            mark_modified: false,
+            only_if_changed: false,
+            view_edit: ViewEdit::NewWindow,
+            show_region_help: true,
         }
     }
 }
@@ -122,6 +148,8 @@ impl Service {
             HotkeyAction::Region => self.capture(CaptureMode::Region),
             HotkeyAction::FullScreen => self.capture(CaptureMode::Full),
             HotkeyAction::Window => self.capture(CaptureMode::Window),
+            HotkeyAction::ActiveWindow => self.capture(CaptureMode::Active),
+            HotkeyAction::Cursor => self.capture(CaptureMode::Cursor),
             HotkeyAction::RepeatLast => self.repeat_last(),
             HotkeyAction::StopAuto => self.auto_running.store(false, Ordering::Relaxed),
         }
@@ -185,8 +213,13 @@ impl Service {
             Last::Mode(m) => capture_mode(m, &s),
             Last::Rect(r) => capture::capture_rect(r, s.include_cursor).map(|i| (i, Last::Rect(r), "Repeat")),
         };
-        if was_visible {
+        if was_visible && s.restore_window {
             show_own(SW_RESTORE);
+        }
+        if s.play_sound {
+            unsafe {
+                let _ = windows::Win32::System::Diagnostics::Debug::MessageBeep(MB_OK);
+            }
         }
         match res {
             Ok((img, last, label)) => {
@@ -227,6 +260,7 @@ fn capture_mode(m: CaptureMode, s: &Settings) -> Result<(RgbaImage, Last, &'stat
         }
         CaptureMode::Virtual => (capture::capture_virtual_desktop(cur)?, Last::Mode(m), "Virtual desktop"),
         CaptureMode::Active => (capture::capture_active_window(cur)?, Last::Mode(m), "Active window"),
+        CaptureMode::ActiveNoFrame => (capture::capture_active_client(cur)?, Last::Mode(m), "Active window without frame"),
         CaptureMode::Cursor => (capture::capture_cursor_only(s.background)?, Last::Mode(m), "Cursor"),
         CaptureMode::Region | CaptureMode::Window => {
             let (arg, label) = if m == CaptureMode::Region { ("region", "Region") } else { ("window", "Window") };
