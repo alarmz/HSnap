@@ -541,7 +541,7 @@ impl App {
                 self.capture_item(ui, "Full Screen", CaptureMode::Full);
                 self.capture_item(ui, "Virtual Desktop", CaptureMode::Virtual);
                 self.capture_item(ui, "Window or Control", CaptureMode::Window);
-                todo_item(ui, "Entire Page with Scrolling");
+                self.capture_item(ui, "Entire Page with Scrolling	Ctrl+Shift+S", CaptureMode::Scroll);
                 todo_item(ui, "Button");
                 self.capture_item(ui, "Active Window", CaptureMode::Active);
                 self.capture_item(ui, "Active Window without Frame", CaptureMode::ActiveNoFrame);

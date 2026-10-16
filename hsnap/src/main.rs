@@ -7,7 +7,9 @@ mod editor;
 mod hotkeys;
 mod picker;
 mod quicksave;
+mod scroll;
 mod service;
+mod stitch;
 
 fn main() {
     capture::make_dpi_aware();
@@ -29,6 +31,17 @@ fn main() {
             };
             match res.and_then(|img| img.save(&args[2]).map_err(|e| e.to_string())) {
                 Ok(()) => println!("saved {}", args[2]),
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        // Headless auto-scroll: hsnap --cli-scroll <x> <y> <out.png>
+        Some("--cli-scroll") if args.len() >= 4 => {
+            let (x, y) = (args[1].parse().unwrap_or(0), args[2].parse().unwrap_or(0));
+            match scroll::capture_scrolling((x, y), 300, 30_000).and_then(|img| img.save(&args[3]).map(|_| img.height()).map_err(|e| e.to_string())) {
+                Ok(h) => println!("saved {} ({h} px tall)", args[3]),
                 Err(e) => {
                     eprintln!("error: {e}");
                     std::process::exit(1);

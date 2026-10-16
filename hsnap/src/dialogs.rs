@@ -109,6 +109,9 @@ fn capture_settings(app: &mut App, ctx: &egui::Context, tab: &mut usize, d: &mut
                     ui.label("Delay before capture (ms)");
                     ui.add(egui::DragValue::new(&mut d.delay_ms).range(0..=60_000).speed(50));
                     ui.end_row();
+                    ui.label("Auto-scroll refresh time (ms)");
+                    ui.add(egui::DragValue::new(&mut d.scroll_refresh_ms).range(50..=5000).speed(10));
+                    ui.end_row();
                     ui.label("Default background color");
                     let mut c = Color32::from_rgba_unmultiplied(d.background[0], d.background[1], d.background[2], d.background[3]);
                     if ui.color_edit_button_srgba(&mut c).changed() {

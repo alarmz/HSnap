@@ -14,18 +14,20 @@ pub enum HotkeyAction {
     ActiveWindow,
     Region,
     MultiRegion,
+    ScrollPage,
     Cursor,
     RepeatLast,
     StopAuto,
 }
 
 impl HotkeyAction {
-    pub const ALL: [HotkeyAction; 8] = [
+    pub const ALL: [HotkeyAction; 9] = [
         HotkeyAction::FullScreen,
         HotkeyAction::Window,
         HotkeyAction::ActiveWindow,
         HotkeyAction::Region,
         HotkeyAction::MultiRegion,
+        HotkeyAction::ScrollPage,
         HotkeyAction::Cursor,
         HotkeyAction::RepeatLast,
         HotkeyAction::StopAuto,
@@ -37,6 +39,7 @@ impl HotkeyAction {
             HotkeyAction::ActiveWindow => "Active window",
             HotkeyAction::Region => "Region",
             HotkeyAction::MultiRegion => "Multi-region",
+            HotkeyAction::ScrollPage => "Entire page with scrolling",
             HotkeyAction::Cursor => "Mouse cursor only",
             HotkeyAction::RepeatLast => "Repeat last capture",
             HotkeyAction::StopAuto => "Stop auto-capture",
@@ -77,11 +80,13 @@ impl Binding {
 pub fn defaults() -> Vec<(HotkeyAction, Binding)> {
     let cs = |c: char| Binding { ctrl: true, shift: true, alt: false, vk: c as u32 };
     vec![
-        (HotkeyAction::FullScreen, cs('S')),
+        // The manual assigns no default to full screen; F is HSnap's own choice.
+        (HotkeyAction::FullScreen, cs('F')),
         (HotkeyAction::Window, cs('W')),
         (HotkeyAction::ActiveWindow, cs('A')),
         (HotkeyAction::Region, cs('R')),
         (HotkeyAction::MultiRegion, cs('M')),
+        (HotkeyAction::ScrollPage, cs('S')),
         (HotkeyAction::Cursor, cs('C')),
         (HotkeyAction::RepeatLast, cs('L')),
         (HotkeyAction::StopAuto, Binding { ctrl: false, shift: true, alt: false, vk: VK_F11.0 as u32 }),

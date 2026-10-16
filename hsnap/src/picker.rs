@@ -16,6 +16,8 @@ pub enum Mode {
     Multi,
     /// Slide a box the size of the previous region around the screen.
     Pan,
+    /// Pick the window to auto-scroll; yields a 1x1 image at the clicked point.
+    ScrollTarget,
 }
 
 impl Mode {
@@ -26,6 +28,7 @@ impl Mode {
             Mode::FreeHand => "freehand",
             Mode::Multi => "multi",
             Mode::Pan => "pan",
+            Mode::ScrollTarget => "scrolltarget",
         }
     }
     pub fn from_arg(s: &str) -> Mode {
@@ -34,6 +37,7 @@ impl Mode {
             "freehand" => Mode::FreeHand,
             "multi" => Mode::Multi,
             "pan" => Mode::Pan,
+            "scrolltarget" => Mode::ScrollTarget,
             _ => Mode::Region,
         }
     }
@@ -114,7 +118,7 @@ struct Picker {
 
 pub fn run(p: Params) -> i32 {
     let vs = capture::virtual_screen();
-    let windows = if matches!(p.mode, Mode::Window | Mode::Multi) { capture::visible_windows() } else { vec![] };
+    let windows = if matches!(p.mode, Mode::Window | Mode::Multi | Mode::ScrollTarget) { capture::visible_windows() } else { vec![] };
     let shot = match capture::capture_rect(vs, p.include_cursor) {
         Ok(s) => s,
         Err(e) => {
@@ -181,6 +185,7 @@ impl Picker {
             Mode::FreeHand => "Draw around the area. Enter, right-click, or clicking near the start finishes. Esc cancels.",
             Mode::Multi => "Drag regions (or click windows). Right-click switches region/window, Backspace removes the last, Enter finishes, Esc cancels.",
             Mode::Pan => "Move the box and click to capture a region of the previous size. Esc / right-click cancels.",
+            Mode::ScrollTarget => "Click inside the window to capture with auto-scroll (not on a scroll bar). Esc cancels; Esc also stops scrolling.",
         }
     }
 }
@@ -314,13 +319,15 @@ impl eframe::App for PickerApp {
                         p.drag_start = None;
                     }
                 }
-                Mode::Window | Mode::Multi => {
+                Mode::Window | Mode::Multi | Mode::ScrollTarget => {
                     if let Some((hx, hy)) = hover {
                         selection = window_at(p, hx, hy);
                         if resp.clicked() {
                             if let Some(sel) = selection {
                                 if p.p.mode == Mode::Window {
                                     commit = Some(Commit::Rect(sel));
+                                } else if p.p.mode == Mode::ScrollTarget {
+                                    commit = Some(Commit::Rect(Rect { x: hx, y: hy, w: 1, h: 1 }));
                                 } else {
                                     p.parts.push(sel);
                                 }
@@ -402,7 +409,7 @@ impl eframe::App for PickerApp {
                 }
                 painter.rect_filled(egui::Rect::from_min_size(Pos2::new(16.0, 16.0), egui::vec2(hint.chars().count() as f32 * 7.6 + 16.0, 26.0)), 4.0, Color32::from_black_alpha(190));
                 painter.text(Pos2::new(24.0, 21.0), egui::Align2::LEFT_TOP, hint, egui::FontId::proportional(14.0), Color32::WHITE);
-                if p.p.mode != Mode::Window {
+                if !matches!(p.p.mode, Mode::Window | Mode::ScrollTarget) {
                     if let Some(h) = hover {
                         let cap = match selection {
                             Some(s) => format!("{},{}  {}x{}", h.0 + ox, h.1 + oy, s.w, s.h),

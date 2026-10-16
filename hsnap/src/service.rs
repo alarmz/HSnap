@@ -4,6 +4,7 @@
 use crate::capture::{self, Rect};
 use crate::compose::Compose;
 use crate::picker;
+use crate::scroll;
 use crate::hotkeys::{self, Binding, HotkeyAction};
 use eframe::egui;
 use image::RgbaImage;
@@ -29,6 +30,7 @@ pub enum CaptureMode {
     FreeHand,
     Multi,
     Pan,
+    Scroll,
     Cursor,
 }
 
@@ -60,6 +62,8 @@ pub struct Settings {
     pub multi_compose: Compose,
     pub multi_margin: u32,
     pub multi_start_window: bool,
+    pub scroll_refresh_ms: u64,
+    pub scroll_max_height: u32,
 }
 
 /// What happens with each new capture (View & Edit tab).
@@ -99,6 +103,8 @@ impl Default for Settings {
             multi_compose: Compose::Preserve,
             multi_margin: 0,
             multi_start_window: false,
+            scroll_refresh_ms: 300,
+            scroll_max_height: 30_000,
         }
     }
 }
@@ -112,7 +118,24 @@ impl Settings {
         std::env::var("APPDATA").ok().map(|a| PathBuf::from(a).join("hsnap").join("settings.json"))
     }
     pub fn load() -> Self {
-        Self::path().and_then(|p| std::fs::read_to_string(p).ok()).and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default()
+        let mut s: Settings = Self::path().and_then(|p| std::fs::read_to_string(p).ok()).and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
+        s.normalize_hotkeys();
+        s
+    }
+
+    /// Settings saved by an older build may lack newer actions or clash with new defaults.
+    fn normalize_hotkeys(&mut self) {
+        let defs = hotkeys::defaults();
+        let clash = self.hotkeys.iter().enumerate().any(|(i, (_, b))| self.hotkeys.iter().skip(i + 1).any(|(_, c)| c == b));
+        if clash {
+            self.hotkeys = defs;
+            return;
+        }
+        for (a, b) in defs {
+            if !self.hotkeys.iter().any(|(x, _)| *x == a) && !self.hotkeys.iter().any(|(_, c)| *c == b) {
+                self.hotkeys.push((a, b));
+            }
+        }
     }
     pub fn save(&self) {
         if let Some(p) = Self::path() {
@@ -162,6 +185,7 @@ impl Service {
             HotkeyAction::ActiveWindow => self.capture(CaptureMode::Active),
             HotkeyAction::Cursor => self.capture(CaptureMode::Cursor),
             HotkeyAction::MultiRegion => self.capture(CaptureMode::Multi),
+            HotkeyAction::ScrollPage => self.capture(CaptureMode::Scroll),
             HotkeyAction::RepeatLast => self.repeat_last(),
             HotkeyAction::StopAuto => self.auto_running.store(false, Ordering::Relaxed),
         }
@@ -278,6 +302,11 @@ fn capture_mode(m: CaptureMode, s: &Settings, pan: Option<(i32, i32)>) -> Result
         CaptureMode::Active => (capture::capture_active_window(cur)?, Last::Mode(m), "Active window"),
         CaptureMode::ActiveNoFrame => (capture::capture_active_client(cur)?, Last::Mode(m), "Active window without frame"),
         CaptureMode::Cursor => (capture::capture_cursor_only(s.background)?, Last::Mode(m), "Cursor"),
+        CaptureMode::Scroll => {
+            let (_, click) = run_picker(picker::Mode::ScrollTarget, s, None)?;
+            let pt = click.ok_or("no click position")?;
+            (scroll::capture_scrolling((pt.x, pt.y), s.scroll_refresh_ms, s.scroll_max_height)?, Last::Mode(m), "Entire page")
+        }
         CaptureMode::Region | CaptureMode::Window | CaptureMode::FreeHand | CaptureMode::Multi | CaptureMode::Pan => {
             let (mode, label) = match m {
                 CaptureMode::Region => (picker::Mode::Region, "Region"),
@@ -289,37 +318,43 @@ fn capture_mode(m: CaptureMode, s: &Settings, pan: Option<(i32, i32)>) -> Result
             if mode == picker::Mode::Pan && pan.is_none() {
                 return Err("no previous region to pan".into());
             }
-            let mut bg = s.background;
-            if s.bg_transparent {
-                bg[3] = 0;
-            }
-            let params = picker::Params {
-                mode,
-                out: std::env::temp_dir().join(format!("hsnap-pick-{}.png", std::process::id())),
-                include_cursor: cur,
-                bg,
-                compose: s.multi_compose,
-                margin: s.multi_margin,
-                pan_size: pan,
-                show_help: s.show_region_help,
-                multi_start_window: s.multi_start_window,
-            };
-            let tmp = params.out.clone();
-            let status = std::process::Command::new(std::env::current_exe().map_err(|e| e.to_string())?)
-                .args(params.to_args())
-                .status()
-                .map_err(|e| e.to_string())?;
-            if !status.success() {
-                return Err(if status.code() == Some(1) { "cancelled".into() } else { "picker failed".into() });
-            }
-            let img = image::open(&tmp).map_err(|e| e.to_string())?.to_rgba8();
-            let rect = std::fs::read_to_string(tmp.with_extension("rect")).ok().and_then(|t| {
-                let v: Vec<i32> = t.split_whitespace().filter_map(|x| x.parse().ok()).collect();
-                (v.len() == 4).then(|| Rect { x: v[0], y: v[1], w: v[2], h: v[3] })
-            });
-            let _ = std::fs::remove_file(&tmp);
-            let _ = std::fs::remove_file(tmp.with_extension("rect"));
+            let (img, rect) = run_picker(mode, s, pan)?;
             (img, rect.map(Last::Rect).unwrap_or(Last::Mode(m)), label)
         }
     })
+}
+
+/// Runs the selection overlay in a child process; returns its image and screen rectangle.
+fn run_picker(mode: picker::Mode, s: &Settings, pan: Option<(i32, i32)>) -> Result<(RgbaImage, Option<Rect>), String> {
+    let mut bg = s.background;
+    if s.bg_transparent {
+        bg[3] = 0;
+    }
+    let params = picker::Params {
+        mode,
+        out: std::env::temp_dir().join(format!("hsnap-pick-{}.png", std::process::id())),
+        include_cursor: s.include_cursor,
+        bg,
+        compose: s.multi_compose,
+        margin: s.multi_margin,
+        pan_size: pan,
+        show_help: s.show_region_help,
+        multi_start_window: s.multi_start_window,
+    };
+    let tmp = params.out.clone();
+    let status = std::process::Command::new(std::env::current_exe().map_err(|e| e.to_string())?)
+        .args(params.to_args())
+        .status()
+        .map_err(|e| e.to_string())?;
+    if !status.success() {
+        return Err(if status.code() == Some(1) { "cancelled".into() } else { "picker failed".into() });
+    }
+    let img = image::open(&tmp).map_err(|e| e.to_string())?.to_rgba8();
+    let rect = std::fs::read_to_string(tmp.with_extension("rect")).ok().and_then(|t| {
+        let v: Vec<i32> = t.split_whitespace().filter_map(|x| x.parse().ok()).collect();
+        (v.len() == 4).then(|| Rect { x: v[0], y: v[1], w: v[2], h: v[3] })
+    });
+    let _ = std::fs::remove_file(&tmp);
+    let _ = std::fs::remove_file(tmp.with_extension("rect"));
+    Ok((img, rect))
 }
