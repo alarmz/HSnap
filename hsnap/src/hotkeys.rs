@@ -13,17 +13,19 @@ pub enum HotkeyAction {
     Window,
     ActiveWindow,
     Region,
+    MultiRegion,
     Cursor,
     RepeatLast,
     StopAuto,
 }
 
 impl HotkeyAction {
-    pub const ALL: [HotkeyAction; 7] = [
+    pub const ALL: [HotkeyAction; 8] = [
         HotkeyAction::FullScreen,
         HotkeyAction::Window,
         HotkeyAction::ActiveWindow,
         HotkeyAction::Region,
+        HotkeyAction::MultiRegion,
         HotkeyAction::Cursor,
         HotkeyAction::RepeatLast,
         HotkeyAction::StopAuto,
@@ -34,6 +36,7 @@ impl HotkeyAction {
             HotkeyAction::Window => "Window or control",
             HotkeyAction::ActiveWindow => "Active window",
             HotkeyAction::Region => "Region",
+            HotkeyAction::MultiRegion => "Multi-region",
             HotkeyAction::Cursor => "Mouse cursor only",
             HotkeyAction::RepeatLast => "Repeat last capture",
             HotkeyAction::StopAuto => "Stop auto-capture",
@@ -78,6 +81,7 @@ pub fn defaults() -> Vec<(HotkeyAction, Binding)> {
         (HotkeyAction::Window, cs('W')),
         (HotkeyAction::ActiveWindow, cs('A')),
         (HotkeyAction::Region, cs('R')),
+        (HotkeyAction::MultiRegion, cs('M')),
         (HotkeyAction::Cursor, cs('C')),
         (HotkeyAction::RepeatLast, cs('L')),
         (HotkeyAction::StopAuto, Binding { ctrl: false, shift: true, alt: false, vk: VK_F11.0 as u32 }),

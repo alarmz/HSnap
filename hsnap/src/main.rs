@@ -2,24 +2,22 @@ mod app;
 mod dialogs;
 mod icons;
 mod capture;
+mod compose;
 mod editor;
 mod hotkeys;
 mod picker;
 mod quicksave;
 mod service;
 
-use std::path::PathBuf;
-
 fn main() {
     capture::make_dpi_aware();
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         // Internal: selection overlay used by the GUI.
-        Some("--pick") if args.len() >= 3 => {
-            let mode = if args[1] == "window" { picker::Mode::Window } else { picker::Mode::Region };
-            let cursor = args.get(3).is_some_and(|a| a == "1");
-            std::process::exit(picker::run(mode, PathBuf::from(&args[2]), cursor));
-        }
+        Some("--pick") => match picker::Params::from_args(&args[1..]) {
+            Some(p) => std::process::exit(picker::run(p)),
+            None => std::process::exit(2),
+        },
         // Headless capture: hsnap --cli <full|virtual|active|cursor> <out.png>
         Some("--cli") if args.len() >= 3 => {
             let res = match args[1].as_str() {

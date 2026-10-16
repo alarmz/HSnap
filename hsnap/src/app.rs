@@ -547,9 +547,9 @@ impl App {
                 self.capture_item(ui, "Active Window without Frame", CaptureMode::ActiveNoFrame);
                 ui.separator();
                 self.capture_item(ui, "Region", CaptureMode::Region);
-                todo_item(ui, "Free Hand");
-                todo_item(ui, "Pan Last Region");
-                todo_item(ui, "Multi-Region");
+                self.capture_item(ui, "Free Hand", CaptureMode::FreeHand);
+                self.capture_item(ui, "Pan Last Region", CaptureMode::Pan);
+                self.capture_item(ui, "Multi-Region	Ctrl+Shift+M", CaptureMode::Multi);
                 ui.separator();
                 self.capture_item(ui, "Mouse Cursor Only", CaptureMode::Cursor);
                 if ui.button("Repeat Last Capture").clicked() {

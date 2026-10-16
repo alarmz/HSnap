@@ -2,6 +2,8 @@
 //! hot keys keep working while the main window is minimised.
 
 use crate::capture::{self, Rect};
+use crate::compose::Compose;
+use crate::picker;
 use crate::hotkeys::{self, Binding, HotkeyAction};
 use eframe::egui;
 use image::RgbaImage;
@@ -24,6 +26,9 @@ pub enum CaptureMode {
     ActiveNoFrame,
     Region,
     Window,
+    FreeHand,
+    Multi,
+    Pan,
     Cursor,
 }
 
@@ -52,6 +57,9 @@ pub struct Settings {
     pub only_if_changed: bool,
     pub view_edit: ViewEdit,
     pub show_region_help: bool,
+    pub multi_compose: Compose,
+    pub multi_margin: u32,
+    pub multi_start_window: bool,
 }
 
 /// What happens with each new capture (View & Edit tab).
@@ -88,6 +96,9 @@ impl Default for Settings {
             only_if_changed: false,
             view_edit: ViewEdit::NewWindow,
             show_region_help: true,
+            multi_compose: Compose::Preserve,
+            multi_margin: 0,
+            multi_start_window: false,
         }
     }
 }
@@ -150,6 +161,7 @@ impl Service {
             HotkeyAction::Window => self.capture(CaptureMode::Window),
             HotkeyAction::ActiveWindow => self.capture(CaptureMode::Active),
             HotkeyAction::Cursor => self.capture(CaptureMode::Cursor),
+            HotkeyAction::MultiRegion => self.capture(CaptureMode::Multi),
             HotkeyAction::RepeatLast => self.repeat_last(),
             HotkeyAction::StopAuto => self.auto_running.store(false, Ordering::Relaxed),
         }
@@ -209,8 +221,12 @@ impl Service {
             // Give the minimise animation time to finish, then honour the delay.
             std::thread::sleep(Duration::from_millis(s.delay_ms + if was_visible { 400 } else { 0 }));
         }
+        let pan = self.last.lock().unwrap().and_then(|(l, _)| match l {
+            Last::Rect(r) => Some((r.w, r.h)),
+            Last::Mode(_) => None,
+        });
         let res = match what {
-            Last::Mode(m) => capture_mode(m, &s),
+            Last::Mode(m) => capture_mode(m, &s, pan),
             Last::Rect(r) => capture::capture_rect(r, s.include_cursor).map(|i| (i, Last::Rect(r), "Repeat")),
         };
         if was_visible && s.restore_window {
@@ -251,7 +267,7 @@ fn show_own(cmd: SHOW_WINDOW_CMD) {
     }
 }
 
-fn capture_mode(m: CaptureMode, s: &Settings) -> Result<(RgbaImage, Last, &'static str), String> {
+fn capture_mode(m: CaptureMode, s: &Settings, pan: Option<(i32, i32)>) -> Result<(RgbaImage, Last, &'static str), String> {
     let cur = s.include_cursor;
     Ok(match m {
         CaptureMode::Full => {
@@ -262,13 +278,35 @@ fn capture_mode(m: CaptureMode, s: &Settings) -> Result<(RgbaImage, Last, &'stat
         CaptureMode::Active => (capture::capture_active_window(cur)?, Last::Mode(m), "Active window"),
         CaptureMode::ActiveNoFrame => (capture::capture_active_client(cur)?, Last::Mode(m), "Active window without frame"),
         CaptureMode::Cursor => (capture::capture_cursor_only(s.background)?, Last::Mode(m), "Cursor"),
-        CaptureMode::Region | CaptureMode::Window => {
-            let (arg, label) = if m == CaptureMode::Region { ("region", "Region") } else { ("window", "Window") };
-            let tmp = std::env::temp_dir().join(format!("hsnap-pick-{}.png", std::process::id()));
+        CaptureMode::Region | CaptureMode::Window | CaptureMode::FreeHand | CaptureMode::Multi | CaptureMode::Pan => {
+            let (mode, label) = match m {
+                CaptureMode::Region => (picker::Mode::Region, "Region"),
+                CaptureMode::Window => (picker::Mode::Window, "Window"),
+                CaptureMode::FreeHand => (picker::Mode::FreeHand, "Free hand"),
+                CaptureMode::Multi => (picker::Mode::Multi, "Multi-region"),
+                _ => (picker::Mode::Pan, "Pan region"),
+            };
+            if mode == picker::Mode::Pan && pan.is_none() {
+                return Err("no previous region to pan".into());
+            }
+            let mut bg = s.background;
+            if s.bg_transparent {
+                bg[3] = 0;
+            }
+            let params = picker::Params {
+                mode,
+                out: std::env::temp_dir().join(format!("hsnap-pick-{}.png", std::process::id())),
+                include_cursor: cur,
+                bg,
+                compose: s.multi_compose,
+                margin: s.multi_margin,
+                pan_size: pan,
+                show_help: s.show_region_help,
+                multi_start_window: s.multi_start_window,
+            };
+            let tmp = params.out.clone();
             let status = std::process::Command::new(std::env::current_exe().map_err(|e| e.to_string())?)
-                .args(["--pick", arg])
-                .arg(&tmp)
-                .arg(if cur { "1" } else { "0" })
+                .args(params.to_args())
                 .status()
                 .map_err(|e| e.to_string())?;
             if !status.success() {

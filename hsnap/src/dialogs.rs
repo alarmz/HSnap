@@ -1,6 +1,7 @@
 //! Modal-style dialogs: Capture Settings, hot keys, new image, scale, about.
 
 use crate::app::App;
+use crate::compose::Compose;
 use crate::editor;
 use crate::hotkeys::{self, Binding, HotkeyAction};
 use crate::service::{Settings, ViewEdit};
@@ -126,7 +127,19 @@ fn capture_settings(app: &mut App, ctx: &egui::Context, tab: &mut usize, d: &mut
             }
             1 => {
                 ui.checkbox(&mut d.show_region_help, "Show help and zoom area during region capture");
-                ui.weak("Default region shape and multi-region composition are not implemented yet.");
+                ui.checkbox(&mut d.multi_start_window, "Start multi-region capture with the window/control selector");
+                ui.separator();
+                ui.label("Multi-region composition");
+                ui.radio_value(&mut d.multi_compose, Compose::Preserve, "Preserve each fragment's relative screen position");
+                ui.radio_value(&mut d.multi_compose, Compose::TileVertical, "Tile fragments vertically");
+                ui.radio_value(&mut d.multi_compose, Compose::TileHorizontal, "Tile fragments horizontally");
+                ui.add_enabled_ui(d.multi_compose != Compose::Preserve, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label("Tiling margin (px)");
+                        ui.add(egui::DragValue::new(&mut d.multi_margin).range(0..=500));
+                    });
+                });
+                ui.weak("Default region shape is not implemented yet; gaps use the background color from the Capture tab.");
             }
             2 => {
                 ui.radio_value(&mut d.view_edit, ViewEdit::NewWindow, "Create a new window for each capture");
