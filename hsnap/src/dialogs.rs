@@ -19,6 +19,8 @@ pub enum Dialog {
     PrintPreview { prev: Box<crate::print_ui::Preview>, page: usize },
     Stamps(Box<crate::stamps_ui::Manager>),
     Text,
+    Filter(Box<crate::filter_ui::FilterDialog>),
+    Info(String),
 }
 
 const TABS: [&str; 6] = ["Capture", "Region", "View & Edit", "Copy & Print", "QuickSave", "TextSnap"];
@@ -36,6 +38,14 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         Dialog::PageSetup { draft, prev } => crate::print_ui::page_setup(app, ctx, draft, prev),
         Dialog::Stamps(m) => crate::stamps_ui::stamps(app, ctx, m),
         Dialog::Text => text_window(app, ctx),
+        Dialog::Filter(f) => crate::filter_ui::show(app, ctx, f),
+        Dialog::Info(msg) => {
+            let mut open = true;
+            egui::Window::new("HSnap").open(&mut open).collapsible(false).resizable(false).show(ctx, |ui| {
+                ui.label(msg.as_str());
+            });
+            open
+        }
         Dialog::PrintPreview { prev, page } => crate::print_ui::print_preview(app, ctx, prev, page),
     };
     // A handler may have opened a different dialog; do not clobber it.

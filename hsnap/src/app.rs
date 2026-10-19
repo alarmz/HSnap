@@ -235,6 +235,7 @@ impl App {
             return;
         }
         let s = self.settings();
+        c.img = crate::filter_ui::auto_filters(c.img, &s);
         let store = crate::stamps::Store { dir: std::path::PathBuf::from(&s.stamps_dir) };
         for st in store.list().into_iter().filter(|st| st.auto_add) {
             let pic = store.picture(&st);
@@ -335,6 +336,14 @@ impl App {
     fn open_page_setup(&mut self) {
         let prev = self.preview_for_current();
         self.dialog = Dialog::PageSetup { draft: Box::new(self.settings().page_setup), prev: Box::new(prev) };
+    }
+
+    fn open_filter(&mut self, kind: crate::filter_ui::Kind) {
+        let Some(doc) = self.docs.get(self.current) else { return };
+        let sel = if self.selection.is_some() { self.region() } else { None };
+        let bg = self.bg_rgba();
+        let d = crate::filter_ui::FilterDialog::new(kind, doc.flatten(), sel, bg, &self.settings());
+        self.dialog = Dialog::Filter(Box::new(d));
     }
 
     fn has_doc(&self) -> bool {
@@ -558,6 +567,28 @@ impl eframe::App for App {
             // Developer hook: open a dialog on start-up (used for visual checks).
             match std::env::var("HSNAP_DIALOG").as_deref() {
                 Ok("pagesetup") => self.open_page_setup(),
+                Ok(k) if k.starts_with("filter:") => {
+                    // A colourful synthetic image so the effect of each filter is visible.
+                    let img = image::RgbaImage::from_fn(400, 300, |x, y| {
+                        let band = ((x / 50 + y / 50) % 2) as u8;
+                        image::Rgba([(x * 255 / 400) as u8, (y * 255 / 300) as u8, 90 + band * 120, 255])
+                    });
+                    self.new_document(img, "synthetic".into());
+                    use crate::filter_ui::Kind;
+                    let kind = match &k[7..] {
+                        "shear" => Kind::Shear,
+                        "mosaic" => Kind::Mosaic,
+                        "emboss" => Kind::Emboss,
+                        "sharpen" => Kind::SharpenBlur,
+                        "shadow" => Kind::Shadow,
+                        "frame" => Kind::Frame,
+                        "colorres" => Kind::ColorRes,
+                        "halftone" => Kind::Halftone,
+                        "substitute" => Kind::Substitute,
+                        _ => Kind::Correct,
+                    };
+                    self.open_filter(kind);
+                }
                 Ok("textsettings") => self.dialog = Dialog::CaptureSettings { tab: 5, draft: Box::new(self.settings()) },
                 Ok("textwindow") => {
                     self.text_buffer = "Sample captured text
@@ -821,32 +852,71 @@ impl App {
                         self.selection = None;
                     }
                 });
-                todo_item(ui, "Shear…");
-                todo_item(ui, "Mosaic…");
-                todo_item(ui, "Emboss…");
-                todo_item(ui, "Sharpen or Blur…");
-                todo_item(ui, "Shadow…");
-                todo_item(ui, "Frame…");
+                if ui.add_enabled(has, egui::Button::new("Shear…")).clicked() {
+                    ui.close_menu();
+                    self.open_filter(crate::filter_ui::Kind::Shear);
+                }
+                if ui.add_enabled(has, egui::Button::new("Mosaic…")).clicked() {
+                    ui.close_menu();
+                    self.open_filter(crate::filter_ui::Kind::Mosaic);
+                }
+                if ui.add_enabled(has, egui::Button::new("Emboss…")).clicked() {
+                    ui.close_menu();
+                    self.open_filter(crate::filter_ui::Kind::Emboss);
+                }
+                if ui.add_enabled(has, egui::Button::new("Sharpen or Blur…")).clicked() {
+                    ui.close_menu();
+                    self.open_filter(crate::filter_ui::Kind::SharpenBlur);
+                }
+                if ui.add_enabled(has, egui::Button::new("Shadow…")).clicked() {
+                    ui.close_menu();
+                    self.open_filter(crate::filter_ui::Kind::Shadow);
+                }
+                if ui.add_enabled(has, egui::Button::new("Frame…")).clicked() {
+                    ui.close_menu();
+                    self.open_filter(crate::filter_ui::Kind::Frame);
+                }
             });
             ui.menu_button("Color", |ui| {
-                todo_item(ui, "Color Resolution…");
+                if ui.add_enabled(has, egui::Button::new("Color Resolution…")).clicked() {
+                    ui.close_menu();
+                    self.open_filter(crate::filter_ui::Kind::ColorRes);
+                }
                 if ui.add_enabled(has, egui::Button::new("Black and White")).clicked() {
                     ui.close_menu();
                     self.edit(|d| d.transform(editor::black_and_white));
                 }
-                todo_item(ui, "Halftone…");
+                if ui.add_enabled(has, egui::Button::new("Halftone…")).clicked() {
+                    ui.close_menu();
+                    self.open_filter(crate::filter_ui::Kind::Halftone);
+                }
                 if ui.add_enabled(has, egui::Button::new("Gray Scale")).clicked() {
                     ui.close_menu();
                     self.edit(|d| d.transform(editor::grayscale));
                 }
-                todo_item(ui, "Color Correction…");
-                todo_item(ui, "Invert Black and White");
+                if ui.add_enabled(has, egui::Button::new("Color Correction…")).clicked() {
+                    ui.close_menu();
+                    self.open_filter(crate::filter_ui::Kind::Correct);
+                }
+                if ui.add_enabled(has, egui::Button::new("Invert Black and White")).clicked() {
+                    ui.close_menu();
+                    self.edit(|d| d.transform(crate::filters::invert_black_white));
+                }
                 if ui.add_enabled(has, egui::Button::new("Invert Colors")).clicked() {
                     ui.close_menu();
                     self.edit(|d| d.transform(editor::invert));
                 }
-                todo_item(ui, "Substitute Colors…");
-                todo_item(ui, "Unique Colors");
+                if ui.add_enabled(has, egui::Button::new("Substitute Colors…")).clicked() {
+                    ui.close_menu();
+                    self.open_filter(crate::filter_ui::Kind::Substitute);
+                }
+                if ui.add_enabled(has, egui::Button::new("Unique Colors")).clicked() {
+                    ui.close_menu();
+                    if let Some(d) = self.docs.get(self.current) {
+                        let n = crate::filters::unique_colors(&d.flatten());
+                        self.dialog = Dialog::Info(format!("This image uses {n} unique colors."));
+                    }
+                }
             });
             ui.menu_button("TextSnap", |ui| {
                 self.capture_item(ui, "Text from a Region	Ctrl+Shift+T", CaptureMode::TextRegion);

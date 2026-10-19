@@ -6,6 +6,8 @@ mod icons;
 mod capture;
 mod compose;
 mod editor;
+mod filter_ui;
+mod filters;
 mod hotkeys;
 mod ocr;
 mod picker;

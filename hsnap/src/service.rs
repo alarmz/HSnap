@@ -84,6 +84,9 @@ pub struct Settings {
     pub text_append: bool,
     pub text_delay_ms: u64,
     pub ocr_lang: String,
+    pub shadow: crate::filters::ShadowParams,
+    pub frame: crate::filters::FrameParams,
+    pub subst: crate::filters::SubstTable,
 }
 
 /// What happens with each new capture (View & Edit tab).
@@ -141,6 +144,9 @@ impl Default for Settings {
             text_append: true,
             text_delay_ms: 0,
             ocr_lang: String::new(),
+            shadow: Default::default(),
+            frame: Default::default(),
+            subst: Default::default(),
         }
     }
 }
