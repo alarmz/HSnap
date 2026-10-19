@@ -167,13 +167,13 @@ pub fn expand_text(t: &str, page: usize, pages: usize, name: &str) -> String {
     t.replace("%page%", &page.to_string()).replace("%pages%", &pages.to_string()).replace("%file%", name)
 }
 
-/// Page size (points) and placements for the preview; 1 pixel = 0.75 pt at 96 dpi.
-pub fn plan_preview(setup: &PageSetup, img_w: u32, img_h: u32) -> ((f32, f32), Vec<PagePlacement>) {
+/// Page size (points) and placements for the preview; one image pixel is 72/dpi points.
+pub fn plan_preview(setup: &PageSetup, img_w: u32, img_h: u32, img_dpi: f32) -> ((f32, f32), Vec<PagePlacement>) {
     let (pw, ph) = setup.paper.inches();
     let page = if landscape_for(setup, img_w, img_h) { (ph * 72.0, pw * 72.0) } else { (pw * 72.0, ph * 72.0) };
     let m = setup.margins.map(|v| v * 72.0);
     let reserve = |t: &str| if t.is_empty() { 0.0 } else { setup.font_pt * 1.6 };
-    (page, layout(img_w, img_h, page, m, reserve(&setup.header), reserve(&setup.footer), setup, 0.75))
+    (page, layout(img_w, img_h, page, m, reserve(&setup.header), reserve(&setup.footer), setup, 72.0 / img_dpi.max(1.0)))
 }
 
 #[cfg(test)]
@@ -183,10 +183,10 @@ mod tests {
     #[test]
     fn preview_uses_landscape_page_for_wide_image() {
         let s = PageSetup::default();
-        let (page, pages) = plan_preview(&s, 1600, 900);
+        let (page, pages) = plan_preview(&s, 1600, 900, 96.0);
         assert!(page.0 > page.1);
         assert_eq!(pages.len(), 1);
-        let (page, _) = plan_preview(&s, 900, 1600);
+        let (page, _) = plan_preview(&s, 900, 1600, 96.0);
         assert!(page.0 < page.1);
     }
 

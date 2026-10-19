@@ -21,6 +21,8 @@ pub enum Dialog {
     Text,
     Filter(Box<crate::filter_ui::FilterDialog>),
     Info(String),
+    CutOut { vertical: bool, from: u32, to: u32, sel: Option<(u32, u32, u32, u32)> },
+    Resolution { h: f32, v: f32, apply: bool, make_default: bool },
 }
 
 const TABS: [&str; 6] = ["Capture", "Region", "View & Edit", "Copy & Print", "QuickSave", "TextSnap"];
@@ -39,6 +41,8 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         Dialog::Stamps(m) => crate::stamps_ui::stamps(app, ctx, m),
         Dialog::Text => text_window(app, ctx),
         Dialog::Filter(f) => crate::filter_ui::show(app, ctx, f),
+        Dialog::CutOut { vertical, from, to, sel } => cut_out(app, ctx, vertical, from, to, *sel),
+        Dialog::Resolution { h, v, apply, make_default } => resolution(app, ctx, h, v, apply, make_default),
         Dialog::Info(msg) => {
             let mut open = true;
             egui::Window::new("HSnap").open(&mut open).collapsible(false).resizable(false).show(ctx, |ui| {
@@ -407,4 +411,96 @@ fn text_window(app: &mut App, ctx: &egui::Context) -> bool {
         app.text_buffer.clear();
     }
     open
+}
+
+fn cut_out(app: &mut App, ctx: &egui::Context, vertical: &mut bool, from: &mut u32, to: &mut u32, sel: Option<(u32, u32, u32, u32)>) -> bool {
+    let mut open = true;
+    let (mut ok, mut cancel) = (false, false);
+    let (iw, ih) = app.docs.get(app.current).map(|d| d.image().dimensions()).unwrap_or((1, 1));
+    egui::Window::new("Cut out strip").open(&mut open).collapsible(false).resizable(false).show(ctx, |ui| {
+        ui.horizontal(|ui| {
+            ui.radio_value(vertical, false, "Horizontal strip (rows)");
+            ui.radio_value(vertical, true, "Vertical strip (columns)");
+        });
+        let limit = if *vertical { iw } else { ih };
+        ui.horizontal(|ui| {
+            ui.label(if *vertical { "From column" } else { "From row" });
+            ui.add(egui::DragValue::new(from).range(0..=limit));
+            ui.label("up to (not including)");
+            ui.add(egui::DragValue::new(to).range(0..=limit));
+            if ui.add_enabled(sel.is_some(), egui::Button::new("From selection")).clicked() {
+                if let Some((x, y, w, h)) = sel {
+                    (*from, *to) = if *vertical { (x, x + w) } else { (y, y + h) };
+                }
+            }
+        });
+        let removed = to.saturating_sub(*from).min(limit);
+        let (nw, nh) = if *vertical { (iw - removed.min(iw), ih) } else { (iw, ih - removed.min(ih)) };
+        if removed == 0 {
+            ui.weak("Nothing selected to cut out.");
+        } else if removed >= limit {
+            ui.colored_label(Color32::from_rgb(220, 60, 60), "The strip would remove the whole image.");
+        } else {
+            ui.label(format!("Removes {removed} pixels; the image becomes {nw} x {nh}."));
+        }
+        ui.separator();
+        ui.horizontal(|ui| {
+            ok = ui.button("OK").clicked();
+            cancel = ui.button("Cancel").clicked();
+        });
+    });
+    if ok {
+        let (v, f, t) = (*vertical, *from, *to);
+        let done = app.docs.get(app.current).and_then(|d| if v { crate::filters::cut_strip_vertical(d.image(), f, t) } else { crate::filters::cut_strip_horizontal(d.image(), f, t) }.map(|_| ()));
+        if done.is_some() {
+            app.edit(|d| {
+                d.transform(|img| if v { crate::filters::cut_strip_vertical(&img, f, t) } else { crate::filters::cut_strip_horizontal(&img, f, t) }.unwrap_or(img))
+            });
+            app.clear_selection();
+            return false;
+        }
+    }
+    open && !ok && !cancel
+}
+
+fn resolution(app: &mut App, ctx: &egui::Context, h: &mut f32, v: &mut f32, apply: &mut bool, make_default: &mut bool) -> bool {
+    let mut open = true;
+    let (mut ok, mut cancel) = (false, false);
+    let size = app.docs.get(app.current).map(|d| d.image().dimensions());
+    egui::Window::new("Change Resolution").open(&mut open).collapsible(false).resizable(false).show(ctx, |ui| {
+        ui.horizontal(|ui| {
+            ui.label("Horizontal resolution");
+            ui.add(egui::DragValue::new(h).range(10.0..=2400.0).suffix(" dpi"));
+        });
+        ui.horizontal(|ui| {
+            ui.label("Vertical resolution");
+            ui.add(egui::DragValue::new(v).range(10.0..=2400.0).suffix(" dpi"));
+        });
+        if let Some((w, ht)) = size {
+            let (iw, ih) = (w as f32 / *h, ht as f32 / *v);
+            ui.label(format!("Printed size: {iw:.2} x {ih:.2} in  ({:.1} x {:.1} cm)", iw * 2.54, ih * 2.54));
+        }
+        ui.add_enabled(size.is_some(), egui::Checkbox::new(apply, "Apply to current image"));
+        ui.checkbox(make_default, "Use as default for future images captured from the screen");
+        ui.weak("This changes the dots-per-inch tag only; the pixels stay the same.");
+        ui.separator();
+        ui.horizontal(|ui| {
+            ok = ui.button("OK").clicked();
+            cancel = ui.button("Cancel").clicked();
+        });
+    });
+    if ok {
+        if *apply {
+            if let Some(d) = app.docs.get_mut(app.current) {
+                d.dpi = (*h, *v);
+                d.modified = true;
+            }
+        }
+        if *make_default {
+            let mut s = app.settings();
+            s.default_dpi = (*h, *v);
+            app.apply_settings_quiet(s);
+        }
+    }
+    open && !ok && !cancel
 }

@@ -12,11 +12,17 @@ pub struct Preview {
     tex: Option<egui::TextureHandle>,
     key: (bool, bool),
     pub name: String,
+    dpi: f32,
 }
 
 impl Preview {
     pub fn new(src: RgbaImage, name: String) -> Self {
-        Self { src: Arc::new(src), tex: None, key: (false, false), name }
+        Self { src: Arc::new(src), tex: None, key: (false, false), name, dpi: 96.0 }
+    }
+
+    pub fn with_dpi(mut self, dpi: (f32, f32)) -> Self {
+        self.dpi = dpi.0;
+        self
     }
 
     /// Stand-in used by Page Setup when no image is open.
@@ -40,7 +46,7 @@ impl Preview {
 /// Draw one page; returns the number of pages.
 fn draw_page(ui: &mut egui::Ui, prev: &mut Preview, setup: &PageSetup, page_idx: usize, max: egui::Vec2) -> usize {
     let (iw, ih) = prev.src.dimensions();
-    let (page, pages) = plan_preview(setup, iw, ih);
+    let (page, pages) = plan_preview(setup, iw, ih, prev.dpi);
     let scale = (max.x / page.0).min(max.y / page.1).max(0.05);
     let (rect, _) = ui.allocate_exact_size(vec2(page.0 * scale, page.1 * scale), Sense::hover());
     let p = ui.painter();

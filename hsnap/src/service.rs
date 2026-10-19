@@ -87,6 +87,8 @@ pub struct Settings {
     pub shadow: crate::filters::ShadowParams,
     pub frame: crate::filters::FrameParams,
     pub subst: crate::filters::SubstTable,
+    /// Resolution given to newly captured images, dots per inch.
+    pub default_dpi: (f32, f32),
 }
 
 /// What happens with each new capture (View & Edit tab).
@@ -147,6 +149,7 @@ impl Default for Settings {
             shadow: Default::default(),
             frame: Default::default(),
             subst: Default::default(),
+            default_dpi: (96.0, 96.0),
         }
     }
 }

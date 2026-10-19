@@ -25,6 +25,25 @@ pub struct Shape {
     pub kind: Kind,
     pub color: [u8; 4],
     pub width: f32,
+    pub shadow: Option<ShapeShadow>,
+}
+
+/// Drop shadow cast by a drawn shape.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ShapeShadow {
+    pub dx: i32,
+    pub dy: i32,
+    pub sigma: f32,
+    /// 0..1, how dark the core of the shadow is.
+    pub darkness: f32,
+}
+
+impl ShapeShadow {
+    /// From the Shadow dialog values: distance in pixels, shade and diffusion 0..100, direction in degrees.
+    pub fn from_params(size: u32, shade: u8, diffusion: u8, direction_deg: f32) -> Self {
+        let (s, c) = direction_deg.to_radians().sin_cos();
+        Self { dx: (size as f32 * c).round() as i32, dy: (size as f32 * s).round() as i32, sigma: diffusion as f32 / 100.0 * (size as f32 / 2.0 + 1.0), darkness: shade as f32 / 100.0 }
+    }
 }
 
 #[derive(Clone)]
@@ -37,6 +56,8 @@ pub struct Document {
     pub name: String,
     pub modified: bool,
     pub path: Option<std::path::PathBuf>,
+    /// Resolution in dots per inch (metadata: print size and saved files).
+    pub dpi: (f32, f32),
     cur: Snapshot,
     undo: Vec<Snapshot>,
     redo: Vec<Snapshot>,
@@ -48,6 +69,7 @@ impl Document {
             name: name.into(),
             modified: false,
             path: None,
+            dpi: (96.0, 96.0),
             cur: Snapshot { img: Arc::new(img), shapes: vec![] },
             undo: vec![],
             redo: vec![],
@@ -133,9 +155,39 @@ impl Document {
     pub fn flatten(&self) -> RgbaImage {
         let mut out = (*self.cur.img).clone();
         for s in &self.cur.shapes {
+            if let Some(sh) = &s.shadow {
+                cast_shadow(&mut out, s, sh);
+            }
             draw_shape(&mut out, s);
         }
         out
+    }
+}
+
+/// Darken the image where `shape`, offset and blurred, would fall.
+fn cast_shadow(out: &mut RgbaImage, shape: &Shape, sh: &ShapeShadow) {
+    let (w, h) = out.dimensions();
+    // Render the shape in white on black: the red channel is then its coverage.
+    let mut layer = RgbaImage::from_pixel(w, h, Rgba([0, 0, 0, 255]));
+    draw_shape(&mut layer, &Shape { kind: shape.kind.clone(), color: [255, 255, 255, 255], width: shape.width, shadow: None });
+    let mut mask = image::GrayImage::new(w, h);
+    for (x, y, p) in layer.enumerate_pixels() {
+        let (nx, ny) = (x as i64 + sh.dx as i64, y as i64 + sh.dy as i64);
+        if nx >= 0 && ny >= 0 && nx < w as i64 && ny < h as i64 {
+            mask.put_pixel(nx as u32, ny as u32, image::Luma([p[0]]));
+        }
+    }
+    if sh.sigma > 0.1 {
+        mask = imageops::blur(&mask, sh.sigma);
+    }
+    for (x, y, m) in mask.enumerate_pixels() {
+        if m[0] > 0 {
+            let a = m[0] as f32 / 255.0 * sh.darkness;
+            let px = out.get_pixel_mut(x, y);
+            for c in 0..3 {
+                px[c] = (px[c] as f32 * (1.0 - a)).round() as u8;
+            }
+        }
     }
 }
 
@@ -482,7 +534,7 @@ mod tests {
     #[test]
     fn undo_redo_shapes() {
         let mut d = doc();
-        d.add_shape(Shape { kind: Kind::Line((0., 0.), (19., 0.)), color: [255, 0, 0, 255], width: 1.0 });
+        d.add_shape(Shape { kind: Kind::Line((0., 0.), (19., 0.)), color: [255, 0, 0, 255], width: 1.0, shadow: None });
         assert_eq!(d.shapes().len(), 1);
         d.undo();
         assert!(d.shapes().is_empty() && d.can_redo());
@@ -493,7 +545,7 @@ mod tests {
     #[test]
     fn flatten_draws_pixels() {
         let mut d = doc();
-        d.add_shape(Shape { kind: Kind::Rect((2., 2.), (10., 8.)), color: [0, 0, 255, 255], width: 1.0 });
+        d.add_shape(Shape { kind: Kind::Rect((2., 2.), (10., 8.)), color: [0, 0, 255, 255], width: 1.0, shadow: None });
         let img = d.flatten();
         assert_eq!(img.get_pixel(2, 5), &Rgba([0, 0, 255, 255]));
         assert_eq!(img.get_pixel(6, 5), &Rgba([255, 255, 255, 255]));
@@ -502,7 +554,7 @@ mod tests {
     #[test]
     fn crop_bakes_annotations_and_is_undoable() {
         let mut d = doc();
-        d.add_shape(Shape { kind: Kind::Line((0., 5.), (19., 5.)), color: [0, 0, 0, 255], width: 1.0 });
+        d.add_shape(Shape { kind: Kind::Line((0., 5.), (19., 5.)), color: [0, 0, 0, 255], width: 1.0, shadow: None });
         d.crop(5, 2, 10, 6);
         assert_eq!(d.image().dimensions(), (10, 6));
         assert!(d.shapes().is_empty());
@@ -545,12 +597,28 @@ mod tests {
     #[test]
     fn filled_shapes_cover_interior_and_round_rect_clips_corner() {
         let mut d = Document::new("t", RgbaImage::from_pixel(40, 40, Rgba([255, 255, 255, 255])));
-        d.add_shape(Shape { kind: Kind::FilledRect((5., 5.), (15., 15.)), color: [0, 0, 0, 255], width: 1.0 });
-        d.add_shape(Shape { kind: Kind::FilledRoundRect((20., 20.), (38., 38.)), color: [0, 0, 0, 255], width: 1.0 });
+        d.add_shape(Shape { kind: Kind::FilledRect((5., 5.), (15., 15.)), color: [0, 0, 0, 255], width: 1.0, shadow: None });
+        d.add_shape(Shape { kind: Kind::FilledRoundRect((20., 20.), (38., 38.)), color: [0, 0, 0, 255], width: 1.0, shadow: None });
         let img = d.flatten();
         assert_eq!(img.get_pixel(10, 10), &Rgba([0, 0, 0, 255]));
         assert_eq!(img.get_pixel(29, 29), &Rgba([0, 0, 0, 255]));
         assert_eq!(img.get_pixel(20, 20), &Rgba([255, 255, 255, 255])); // rounded corner
+    }
+
+    #[test]
+    fn shape_shadow_darkens_beside_the_shape_only() {
+        let mut d = Document::new("t", RgbaImage::from_pixel(60, 60, Rgba([200, 200, 200, 255])));
+        let shadow = ShapeShadow::from_params(8, 100, 0, 0.0); // 8 px to the right, sharp, black
+        d.add_shape(Shape { kind: Kind::FilledRect((10., 10.), (30., 30.)), color: [255, 0, 0, 255], width: 1.0, shadow: Some(shadow) });
+        let img = d.flatten();
+        assert_eq!(img.get_pixel(20, 20), &Rgba([255, 0, 0, 255])); // the shape itself
+        assert!(img.get_pixel(35, 20)[0] < 30); // shadow to the right
+        assert_eq!(img.get_pixel(50, 20), &Rgba([200, 200, 200, 255])); // beyond the shadow
+        assert_eq!(img.get_pixel(20, 45), &Rgba([200, 200, 200, 255])); // nothing below
+        let plain = Shape { shadow: None, ..d.shapes()[0].clone() };
+        let mut d2 = Document::new("t", RgbaImage::from_pixel(60, 60, Rgba([200, 200, 200, 255])));
+        d2.add_shape(plain);
+        assert_eq!(d2.flatten().get_pixel(35, 20), &Rgba([200, 200, 200, 255]));
     }
 
     #[test]

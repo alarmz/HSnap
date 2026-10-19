@@ -174,15 +174,15 @@ impl App {
     /// Print the current image: with the print dialog, or straight to the default printer.
     pub fn print_document(&mut self, direct: bool) {
         let Some(doc) = self.docs.get(self.current) else { return };
-        let (img, name, setup) = (doc.flatten(), doc.name.clone(), self.settings().page_setup);
-        self.spawn_print(img, name, setup, direct);
+        let (img, name, setup, dpi) = (doc.flatten(), doc.name.clone(), self.settings().page_setup, doc.dpi);
+        self.spawn_print(img, name, setup, dpi, direct);
     }
 
-    fn spawn_print(&self, img: RgbaImage, name: String, setup: crate::print::PageSetup, direct: bool) {
+    fn spawn_print(&self, img: RgbaImage, name: String, setup: crate::print::PageSetup, dpi: (f32, f32), direct: bool) {
         let (tx, ctx) = (self.msg_tx.clone(), self.ctx.clone());
         std::thread::spawn(move || {
             let target = if direct { crate::print_gdi::Target::DefaultPrinter } else { crate::print_gdi::Target::Dialog(None) };
-            let msg = match crate::print_gdi::print_image(&img, &setup, &name, target) {
+            let msg = match crate::print_gdi::print_image(&img, &setup, &name, dpi, target) {
                 Ok(()) => format!("Printed {name}"),
                 Err(e) if e == "cancelled" => "Print cancelled".to_string(),
                 Err(e) => format!("Print failed: {e}"),
@@ -247,7 +247,7 @@ impl App {
         }
         self.last_img = Some(c.img.clone());
         if s.auto_print {
-            self.spawn_print(c.img.clone(), c.label.to_string(), s.page_setup.clone(), !s.auto_print_prompt);
+            self.spawn_print(c.img.clone(), c.label.to_string(), s.page_setup.clone(), s.default_dpi, !s.auto_print_prompt);
         }
         if s.auto_copy {
             copy_to_clipboard(&c.img);
@@ -260,7 +260,7 @@ impl App {
             match qs.next_name() {
                 Some(n) => {
                     let path = std::path::Path::new(&s.quicksave_dir).join(&n);
-                    self.status = match c.img.save(&path) {
+                    self.status = match crate::fileio::save(&c.img, &path, s.default_dpi) {
                         Ok(()) => format!("Saved {}", path.display()),
                         Err(e) => format!("Save failed: {e}"),
                     };
@@ -284,6 +284,7 @@ impl App {
                 let name = name.unwrap_or_else(|| format!("Capture {}", self.counter));
                 let mut d = Document::new(name, c.img);
                 d.modified = s.mark_modified;
+                d.dpi = s.default_dpi;
                 self.docs.push(d);
                 self.current = self.docs.len() - 1;
                 self.selection = None;
@@ -323,7 +324,7 @@ impl App {
 
     fn preview_for_current(&self) -> crate::print_ui::Preview {
         match self.docs.get(self.current) {
-            Some(d) => crate::print_ui::Preview::new(d.flatten(), d.name.clone()),
+            Some(d) => crate::print_ui::Preview::new(d.flatten(), d.name.clone()).with_dpi(d.dpi),
             None => crate::print_ui::Preview::placeholder(),
         }
     }
@@ -344,6 +345,16 @@ impl App {
         let bg = self.bg_rgba();
         let d = crate::filter_ui::FilterDialog::new(kind, doc.flatten(), sel, bg, &self.settings());
         self.dialog = Dialog::Filter(Box::new(d));
+    }
+
+    /// The shadow new shapes get while Toggle Object Shadow is on.
+    fn new_shape_shadow(&self) -> Option<editor::ShapeShadow> {
+        let s = self.settings().shadow;
+        s.auto_shapes.then(|| editor::ShapeShadow::from_params(s.size, s.shade, s.diffusion, s.direction))
+    }
+
+    pub fn clear_selection(&mut self) {
+        self.selection = None;
     }
 
     fn has_doc(&self) -> bool {
@@ -367,6 +378,9 @@ impl App {
                 let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
                 self.new_document(img.to_rgba8(), name);
                 self.docs[self.current].path = Some(path.clone());
+                if let Some(dpi) = crate::fileio::read_dpi(&path) {
+                    self.docs[self.current].dpi = dpi;
+                }
                 self.push_recent(&path);
             }
             Err(e) => self.status = format!("Open failed: {e}"),
@@ -401,11 +415,8 @@ impl App {
 
     fn save_to(&mut self, path: std::path::PathBuf) {
         let flat = self.docs[self.current].flatten();
-        let res = if matches!(path.extension().and_then(|e| e.to_str()), Some("jpg" | "jpeg")) {
-            image::DynamicImage::ImageRgba8(flat).to_rgb8().save(&path) // JPEG has no alpha
-        } else {
-            flat.save(&path)
-        };
+        let dpi = self.docs[self.current].dpi;
+        let res = crate::fileio::save(&flat, &path, dpi);
         self.status = match res {
             Ok(()) => {
                 let d = &mut self.docs[self.current];
@@ -574,6 +585,11 @@ impl eframe::App for App {
                         image::Rgba([(x * 255 / 400) as u8, (y * 255 / 300) as u8, 90 + band * 120, 255])
                     });
                     self.new_document(img, "synthetic".into());
+                    if &k[7..] == "cutout" {
+                        self.dialog = Dialog::CutOut { vertical: false, from: 100, to: 160, sel: None };
+                    } else if &k[7..] == "resolution" {
+                        self.dialog = Dialog::Resolution { h: 200.0, v: 200.0, apply: true, make_default: false };
+                    } else {
                     use crate::filter_ui::Kind;
                     let kind = match &k[7..] {
                         "shear" => Kind::Shear,
@@ -588,6 +604,7 @@ impl eframe::App for App {
                         _ => Kind::Correct,
                     };
                     self.open_filter(kind);
+                    }
                 }
                 Ok("textsettings") => self.dialog = Dialog::CaptureSettings { tab: 5, draft: Box::new(self.settings()) },
                 Ok("textwindow") => {
@@ -807,7 +824,14 @@ impl App {
                         self.selection = None;
                     }
                 }
-                todo_item(ui, "Cut out strip…");
+                if ui.add_enabled(has, egui::Button::new("Cut out strip…")).clicked() {
+                    ui.close_menu();
+                    let sel = if self.selection.is_some() { self.region() } else { None };
+                    let (iw, ih) = self.docs.get(self.current).map(|d| d.image().dimensions()).unwrap_or((0, 0));
+                    let (from, to) = sel.map_or((0, 0), |(_, y, _, h)| (y, (y + h).min(ih)));
+                    let _ = iw;
+                    self.dialog = Dialog::CutOut { vertical: false, from, to, sel };
+                }
                 ui.separator();
                 if ui.add_enabled(has, egui::Button::new("Scale…")).clicked() {
                     ui.close_menu();
@@ -816,7 +840,11 @@ impl App {
                         self.dialog = Dialog::Scale { w, h, keep: true };
                     }
                 }
-                todo_item(ui, "Change Resolution…");
+                if ui.add_enabled(has, egui::Button::new("Change Resolution…")).clicked() {
+                    ui.close_menu();
+                    let (h, v) = self.docs.get(self.current).map_or(self.settings().default_dpi, |d| d.dpi);
+                    self.dialog = Dialog::Resolution { h, v, apply: true, make_default: false };
+                }
                 if ui.add_enabled(has, egui::Button::new("Auto-trim")).clicked() {
                     ui.close_menu();
                     self.edit(|d| d.transform(editor::auto_trim));
@@ -991,6 +1019,12 @@ impl App {
             }
             if ui.add_enabled(has, egui::Button::new("Print Direct")).on_hover_text("Print to the default printer without the dialog").clicked() {
                 self.print_document(true);
+            }
+            let mut shadow_on = self.settings().shadow.auto_shapes;
+            if ui.toggle_value(&mut shadow_on, "Shadow").on_hover_text("Toggle Object Shadow: new shapes get a drop shadow (set it up in Image > Shadow)").changed() {
+                let mut s = self.settings();
+                s.shadow.auto_shapes = shadow_on;
+                self.apply_settings_quiet(s);
             }
             ui.separator();
             for (label, mode) in [("Full Screen", CaptureMode::Full), ("Window", CaptureMode::Window), ("Active", CaptureMode::Active), ("Region", CaptureMode::Region), ("Cursor", CaptureMode::Cursor)] {
@@ -1219,8 +1253,9 @@ impl App {
             self.pending_text = None;
             if !text.is_empty() {
                 let c = self.fg_rgba();
+                let shadow = self.new_shape_shadow();
                 let w = (self.width / 3.0).max(2.0);
-                self.docs[self.current].add_shape(Shape { kind: Kind::Text(pos, text), color: c, width: w });
+                self.docs[self.current].add_shape(Shape { kind: Kind::Text(pos, text), color: c, width: w, shadow });
                 self.tex_dirty = true;
             }
         }
@@ -1297,6 +1332,7 @@ impl App {
         if resp.drag_stopped() {
             let Some(path) = self.drag.take() else { return };
             let (c, w) = (self.fg_rgba(), self.width);
+            let shadow = self.new_shape_shadow();
             match (tool, path.as_slice()) {
                 (Tool::Select, [a, b]) => {
                     let (x0, y0, x1, y1) = (a.0.min(b.0), a.1.min(b.1), a.0.max(b.0), a.1.max(b.1));
@@ -1333,7 +1369,7 @@ impl App {
                         _ => None,
                     };
                     if let Some(kind) = kind {
-                        self.docs[self.current].add_shape(Shape { kind, color: c, width: w });
+                        self.docs[self.current].add_shape(Shape { kind, color: c, width: w, shadow });
                     }
                 }
             }

@@ -70,17 +70,17 @@ unsafe fn set_orientation(dc: HDC, hdevmode: windows::Win32::Foundation::HGLOBAL
 }
 
 /// Print `img` using `setup`. Returns "cancelled" when the user dismisses the dialog.
-pub fn print_image(img: &RgbaImage, setup: &PageSetup, doc_name: &str, target: Target) -> Result<(), String> {
+pub fn print_image(img: &RgbaImage, setup: &PageSetup, doc_name: &str, img_dpi: (f32, f32), target: Target) -> Result<(), String> {
     let img = prepare_image(img, setup);
     let dc = dc_for(&target, landscape_for(setup, img.width(), img.height()))?;
-    let result = unsafe { print_on(dc, &img, setup, doc_name, &target) };
+    let result = unsafe { print_on(dc, &img, setup, doc_name, img_dpi, &target) };
     unsafe {
         let _ = DeleteDC(dc);
     }
     result
 }
 
-unsafe fn print_on(dc: HDC, img: &RgbaImage, setup: &PageSetup, doc_name: &str, target: &Target) -> Result<(), String> {
+unsafe fn print_on(dc: HDC, img: &RgbaImage, setup: &PageSetup, doc_name: &str, img_dpi: (f32, f32), target: &Target) -> Result<(), String> {
     unsafe {
         let dpi_x = GetDeviceCaps(Some(dc), LOGPIXELSX) as f32;
         let dpi_y = GetDeviceCaps(Some(dc), LOGPIXELSY) as f32;
@@ -98,7 +98,7 @@ unsafe fn print_on(dc: HDC, img: &RgbaImage, setup: &PageSetup, doc_name: &str, 
         let line_h = setup.font_pt * dpi_y / 72.0;
         let top = if setup.header.is_empty() { 0.0 } else { line_h * 1.6 };
         let bottom = if setup.footer.is_empty() { 0.0 } else { line_h * 1.6 };
-        let pages = layout(img.width(), img.height(), (hres, vres), margins, top, bottom, setup, dpi_x / 96.0);
+        let pages = layout(img.width(), img.height(), (hres, vres), margins, top, bottom, setup, dpi_x / img_dpi.0.max(1.0));
 
         let name = wide(doc_name);
         let out = match target {

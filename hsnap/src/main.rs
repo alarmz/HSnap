@@ -7,6 +7,7 @@ mod capture;
 mod compose;
 mod editor;
 mod filter_ui;
+mod fileio;
 mod filters;
 mod hotkeys;
 mod ocr;
@@ -78,7 +79,7 @@ fn main() {
             };
             let setup = print::PageSetup { header: "HSnap test - page %page% of %pages%".into(), footer: "%file%".into(), footer_justify: print::Justify::Right, draw_frame: true, ..Default::default() };
             let target = print_gdi::Target::Named { printer: args[2].clone(), output: Some(args[3].clone().into()) };
-            match print_gdi::print_image(&img, &setup, "test.png", target) {
+            match print_gdi::print_image(&img, &setup, "test.png", (96.0, 96.0), target) {
                 Ok(()) => println!("printed to {}", args[3]),
                 Err(e) => {
                     eprintln!("error: {e}");

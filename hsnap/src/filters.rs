@@ -143,11 +143,13 @@ pub struct ShadowParams {
     pub direction: f32,
     pub bg: [u8; 4],
     pub auto_add: bool,
+    /// Give every newly drawn shape this shadow (the toolbar toggle).
+    pub auto_shapes: bool,
 }
 
 impl Default for ShadowParams {
     fn default() -> Self {
-        Self { size: 8, shade: 70, diffusion: 50, direction: 45.0, bg: [255, 255, 255, 255], auto_add: false }
+        Self { size: 8, shade: 70, diffusion: 50, direction: 45.0, bg: [255, 255, 255, 255], auto_add: false, auto_shapes: false }
     }
 }
 
@@ -587,6 +589,32 @@ pub fn substitute(img: &RgbaImage, table: &SubstTable) -> RgbaImage {
     out
 }
 
+/// Remove the rows `y0..y1` and join what is left. Returns `None` if nothing would remain.
+pub fn cut_strip_horizontal(img: &RgbaImage, y0: u32, y1: u32) -> Option<RgbaImage> {
+    let h = img.height();
+    let (y0, y1) = (y0.min(h), y1.min(h));
+    if y0 >= y1 || y1 - y0 >= h {
+        return None;
+    }
+    let mut out = RgbaImage::new(img.width(), h - (y1 - y0));
+    imageops::replace(&mut out, &imageops::crop_imm(img, 0, 0, img.width(), y0).to_image(), 0, 0);
+    imageops::replace(&mut out, &imageops::crop_imm(img, 0, y1, img.width(), h - y1).to_image(), 0, y0 as i64);
+    Some(out)
+}
+
+/// Remove the columns `x0..x1` and join what is left.
+pub fn cut_strip_vertical(img: &RgbaImage, x0: u32, x1: u32) -> Option<RgbaImage> {
+    let w = img.width();
+    let (x0, x1) = (x0.min(w), x1.min(w));
+    if x0 >= x1 || x1 - x0 >= w {
+        return None;
+    }
+    let mut out = RgbaImage::new(w - (x1 - x0), img.height());
+    imageops::replace(&mut out, &imageops::crop_imm(img, 0, 0, x0, img.height()).to_image(), 0, 0);
+    imageops::replace(&mut out, &imageops::crop_imm(img, x1, 0, w - x1, img.height()).to_image(), x0 as i64, 0);
+    Some(out)
+}
+
 pub fn unique_colors(img: &RgbaImage) -> usize {
     img.pixels().map(|p| [p[0], p[1], p[2]]).collect::<HashSet<_>>().len()
 }
@@ -660,7 +688,7 @@ mod tests {
     #[test]
     fn shadow_darkens_beside_the_object() {
         let img = solid(20, 20, [200, 200, 200]);
-        let p = ShadowParams { size: 6, shade: 100, diffusion: 0, direction: 0.0, bg: [255, 255, 255, 255], auto_add: false };
+        let p = ShadowParams { size: 6, shade: 100, diffusion: 0, direction: 0.0, bg: [255, 255, 255, 255], auto_add: false, auto_shapes: false };
         let s = shadow(&img, None, &p);
         assert!(s.width() > 20 && s.height() > 20);
         let m = (s.width() - 20) / 2;
@@ -765,6 +793,22 @@ mod tests {
         let s = substitute(&img, &swap);
         assert_eq!(s.get_pixel(0, 0), &Rgba([0, 0, 255, 255]));
         assert_eq!(s.get_pixel(1, 0), &Rgba([255, 255, 255, 255]));
+    }
+
+    #[test]
+    fn cut_out_strips_join_the_remaining_parts() {
+        let img = RgbaImage::from_fn(10, 6, |x, y| Rgba([x as u8, y as u8, 0, 255]));
+        let h = cut_strip_horizontal(&img, 2, 4).unwrap();
+        assert_eq!(h.dimensions(), (10, 4));
+        assert_eq!(h.get_pixel(3, 1)[1], 1); // row 1 kept
+        assert_eq!(h.get_pixel(3, 2)[1], 4); // row 4 now follows row 1
+        let v = cut_strip_vertical(&img, 3, 8).unwrap();
+        assert_eq!(v.dimensions(), (5, 6));
+        assert_eq!(v.get_pixel(2, 0)[0], 2);
+        assert_eq!(v.get_pixel(3, 0)[0], 8);
+        assert!(cut_strip_horizontal(&img, 2, 2).is_none());
+        assert!(cut_strip_horizontal(&img, 0, 6).is_none()); // would remove everything
+        assert_eq!(cut_strip_vertical(&img, 8, 99).unwrap().width(), 8); // end clamps to the edge
     }
 
     #[test]

@@ -154,6 +154,7 @@ fn controls(ui: &mut egui::Ui, d: &mut FilterDialog) {
             ui.add(egui::Slider::new(&mut s.direction, 0.0..=359.0).text("Direction (0 = right, 90 = down)"));
             rgba_edit(ui, "Shadow background color", &mut s.bg);
             ui.add_enabled(has_sel, egui::Checkbox::new(&mut d.p.apply_now, "Add around the current image selection"));
+            ui.checkbox(&mut s.auto_shapes, "Auto-add this shadow to newly drawn shapes");
             ui.checkbox(&mut s.auto_add, "Auto-add this shadow to all captured images");
         }
         Kind::Frame => {
