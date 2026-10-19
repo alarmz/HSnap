@@ -558,6 +558,13 @@ impl eframe::App for App {
             // Developer hook: open a dialog on start-up (used for visual checks).
             match std::env::var("HSNAP_DIALOG").as_deref() {
                 Ok("pagesetup") => self.open_page_setup(),
+                Ok("textsettings") => self.dialog = Dialog::CaptureSettings { tab: 5, draft: Box::new(self.settings()) },
+                Ok("textwindow") => {
+                    self.text_buffer = "Sample captured text
+Second line	column two".into();
+                    self.dialog = Dialog::Text;
+                }
+                Ok("textregion") => self.svc.capture(CaptureMode::TextRegion),
                 Ok("stamps") => self.dialog = Dialog::Stamps(Box::new(crate::stamps_ui::Manager::new(std::path::PathBuf::from(self.settings().stamps_dir)))),
                 Ok("stampedit") => self.dialog = Dialog::Stamps(Box::new(crate::stamps_ui::Manager::with_new_editor(std::path::PathBuf::from(self.settings().stamps_dir)))),
                 Ok("preview") => {
