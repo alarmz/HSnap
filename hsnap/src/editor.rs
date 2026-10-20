@@ -18,6 +18,29 @@ pub enum Kind {
     FilledRoundRect(Pt, Pt),
     FilledEllipse(Pt, Pt),
     Text(Pt, String),
+    /// A stamp placed on the image; it stays movable, resizable and editable until the image is flattened.
+    Stamp(StampObject),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct StampObject {
+    pub pos: Pt,
+    pub size: (u32, u32),
+    pub stamp: crate::stamps::Stamp,
+    pub picture: Option<Arc<RgbaImage>>,
+    pub macros: crate::stamps::MacroCtx,
+}
+
+impl StampObject {
+    /// A stamp at its natural size.
+    pub fn new(stamp: &crate::stamps::Stamp, picture: Option<&RgbaImage>, macros: crate::stamps::MacroCtx, pos: Pt) -> Self {
+        let size = crate::stamps::render(stamp, picture, &macros, None).dimensions();
+        Self { pos, size, stamp: stamp.clone(), picture: picture.map(|p| Arc::new(p.clone())), macros }
+    }
+
+    pub fn contains(&self, p: Pt) -> bool {
+        p.0 >= self.pos.0 && p.1 >= self.pos.1 && p.0 < self.pos.0 + self.size.0 as f32 && p.1 < self.pos.1 + self.size.1 as f32
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -79,9 +102,29 @@ impl Document {
     pub fn image(&self) -> &RgbaImage {
         &self.cur.img
     }
-    #[cfg(test)]
     pub fn shapes(&self) -> &[Shape] {
         &self.cur.shapes
+    }
+
+    /// Save an undo step before a run of live edits made through `shape_mut`.
+    pub fn begin_change(&mut self) {
+        self.checkpoint();
+    }
+
+    pub fn shape_mut(&mut self, i: usize) -> Option<&mut Shape> {
+        self.cur.shapes.get_mut(i)
+    }
+
+    pub fn remove_shape(&mut self, i: usize) {
+        if i < self.cur.shapes.len() {
+            self.checkpoint();
+            self.cur.shapes.remove(i);
+        }
+    }
+
+    /// Index of the top-most stamp covering image point `p`.
+    pub fn stamp_at(&self, p: Pt) -> Option<usize> {
+        self.cur.shapes.iter().rposition(|s| matches!(&s.kind, Kind::Stamp(o) if o.contains(p)))
     }
     pub fn can_undo(&self) -> bool {
         !self.undo.is_empty()
@@ -278,6 +321,11 @@ fn draw_shape(img: &mut RgbaImage, s: &Shape) {
             }
         }
         Kind::Text(p, text) => draw_text(img, *p, text, s.width.max(1.0) * 6.0, c),
+        Kind::Stamp(o) => {
+            let st = crate::stamps::render(&o.stamp, o.picture.as_deref(), &o.macros, None);
+            let st = if st.dimensions() == o.size { st } else { imageops::resize(&st, o.size.0.max(1), o.size.1.max(1), imageops::FilterType::Triangle) };
+            imageops::overlay(img, &st, o.pos.0.round() as i64, o.pos.1.round() as i64);
+        }
     }
 }
 
@@ -619,6 +667,41 @@ mod tests {
         let mut d2 = Document::new("t", RgbaImage::from_pixel(60, 60, Rgba([200, 200, 200, 255])));
         d2.add_shape(plain);
         assert_eq!(d2.flatten().get_pixel(35, 20), &Rgba([200, 200, 200, 255]));
+    }
+
+    fn red_stamp() -> crate::stamps::Stamp {
+        crate::stamps::Stamp { use_text: false, use_image: false, width: 20, height: 10, bg: [255, 0, 0, 255], ..Default::default() }
+    }
+
+    fn macros() -> crate::stamps::MacroCtx {
+        crate::stamps::MacroCtx { file: "f.png".into(), path: String::new(), user: "u".into(), date: "2026-01-01".into(), time: "00:00:00".into() }
+    }
+
+    #[test]
+    fn stamp_objects_stay_editable_and_flatten_in_place() {
+        let mut d = Document::new("t", RgbaImage::from_pixel(100, 60, Rgba([0, 0, 255, 255])));
+        let obj = StampObject::new(&red_stamp(), None, macros(), (10.0, 10.0));
+        assert_eq!(obj.size, (20, 10)); // natural size
+        d.add_shape(Shape { kind: Kind::Stamp(obj), color: [0; 4], width: 0.0, shadow: None });
+        assert_eq!(d.flatten().get_pixel(15, 15), &Rgba([255, 0, 0, 255]));
+        assert_eq!(d.flatten().get_pixel(35, 15), &Rgba([0, 0, 255, 255])); // not yet 40 wide
+        // Hit test, then resize and move the object, as the select tool does while dragging.
+        assert_eq!(d.stamp_at((12.0, 12.0)), Some(0));
+        assert_eq!(d.stamp_at((50.0, 50.0)), None);
+        d.begin_change();
+        if let Some(Shape { kind: Kind::Stamp(o), .. }) = d.shape_mut(0) {
+            o.size = (40, 20);
+            o.pos = (30.0, 20.0);
+        }
+        let img = d.flatten();
+        assert_eq!(img.get_pixel(60, 35), &Rgba([255, 0, 0, 255]));
+        assert_eq!(img.get_pixel(15, 15), &Rgba([0, 0, 255, 255])); // moved away
+        d.undo(); // the whole drag is one undo step
+        assert_eq!(d.flatten().get_pixel(15, 15), &Rgba([255, 0, 0, 255]));
+        d.remove_shape(0);
+        assert!(d.shapes().is_empty());
+        d.undo();
+        assert_eq!(d.shapes().len(), 1);
     }
 
     #[test]

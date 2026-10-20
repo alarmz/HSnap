@@ -54,6 +54,40 @@ const PALETTE: &[(Tool, &str)] = &[
     (Tool::ViewOnly, "View only (drag to pan)"),
 ];
 
+/// A move or corner-resize of a stamp object in progress.
+#[derive(Clone, Copy)]
+struct StampDrag {
+    resize: Option<u8>, // corner: 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right
+    start_ptr: Pt,
+    start_pos: Pt,
+    start_size: (u32, u32),
+}
+
+/// The corner handle of `o` within `tol` image pixels of `p`.
+fn corner_at(o: &editor::StampObject, p: Pt, tol: f32) -> Option<u8> {
+    let (x, y, w, h) = (o.pos.0, o.pos.1, o.size.0 as f32, o.size.1 as f32);
+    [(x, y), (x + w, y), (x, y + h), (x + w, y + h)].iter().position(|c| (p.0 - c.0).abs() <= tol && (p.1 - c.1).abs() <= tol).map(|i| i as u8)
+}
+
+/// New position and size after dragging corner `c` by (dx, dy); `keep_aspect` follows the width.
+fn resized(start_pos: Pt, start_size: (u32, u32), c: u8, dx: f32, dy: f32, keep_aspect: bool) -> (Pt, (u32, u32)) {
+    let (w0, h0) = (start_size.0 as f32, start_size.1 as f32);
+    let (mut l, mut t, mut r, mut b) = (start_pos.0, start_pos.1, start_pos.0 + w0, start_pos.1 + h0);
+    let left_edge = c == 0 || c == 2;
+    let top_edge = c == 0 || c == 1;
+    if left_edge { l += dx } else { r += dx }
+    if top_edge { t += dy } else { b += dy }
+    let w = (r - l).max(4.0);
+    let mut h = (b - t).max(4.0);
+    if keep_aspect && w0 > 0.0 {
+        h = (w * h0 / w0).max(4.0);
+    }
+    // The corner opposite the dragged one stays where it was.
+    let x = if left_edge { start_pos.0 + w0 - w } else { start_pos.0 };
+    let y = if top_edge { start_pos.1 + h0 - h } else { start_pos.1 };
+    ((x, y), (w.round() as u32, h.round() as u32))
+}
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum Zoom {
     Auto,
@@ -78,6 +112,9 @@ pub struct App {
     zoom: Zoom,
     drag: Option<Vec<Pt>>,
     selection: Option<PxRect>,
+    /// Index of the selected stamp object in the current document, and a drag in progress on it.
+    selected_stamp: Option<usize>,
+    stamp_drag: Option<StampDrag>,
     pending_text: Option<(Pt, String)>,
     pub quicksave: Option<QuickSave>,
     counter: u32,
@@ -124,6 +161,8 @@ impl App {
             zoom: Zoom::Percent(100.0),
             drag: None,
             selection: None,
+            selected_stamp: None,
+            stamp_drag: None,
             pending_text: None,
             quicksave: None,
             counter: 0,
@@ -317,9 +356,26 @@ impl App {
         let m = crate::stamps::MacroCtx::now(&doc.name, &path);
         let sel = if self.selection.is_some() { self.region() } else { None };
         let (st, pic) = (stamp.clone(), picture.cloned());
-        self.edit(|d| d.transform(|img| crate::stamps::apply(&img, &st, pic.as_ref(), &m, sel)));
+        let base = doc.image().dimensions();
+        let mut obj = editor::StampObject::new(&st, pic.as_ref(), m.clone(), (0.0, 0.0));
+        match crate::stamps::placement_position(st.placement, base, obj.size, sel) {
+            // Header and footer stamps change the canvas, so they are applied to the pixels.
+            None => {
+                self.edit(|d| d.transform(|img| crate::stamps::apply(&img, &st, pic.as_ref(), &m, sel)));
+            }
+            // Everything else stays an object that can be moved, resized and edited.
+            Some((x, y)) => {
+                obj.pos = (x as f32, y as f32);
+                let d = &mut self.docs[self.current];
+                let idx = d.shapes().len();
+                d.add_shape(Shape { kind: Kind::Stamp(obj), color: [0; 4], width: 0.0, shadow: None });
+                self.tex_dirty = true;
+                self.selected_stamp = Some(idx);
+                self.tool = Tool::Select;
+            }
+        }
         self.selection = None;
-        self.status = format!("Inserted stamp {}", stamp.name);
+        self.status = format!("Inserted stamp {} (drag to move, drag a corner to resize, double-click to edit, Delete removes it)", stamp.name);
     }
 
     fn preview_for_current(&self) -> crate::print_ui::Preview {
@@ -364,6 +420,7 @@ impl App {
     pub fn edit<R>(&mut self, f: impl FnOnce(&mut Document) -> R) -> Option<R> {
         let r = self.docs.get_mut(self.current).map(f);
         self.tex_dirty = true;
+        self.selected_stamp = None; // undo, redo and flattening can renumber the objects
         r
     }
 
@@ -555,7 +612,15 @@ impl App {
             self.paste();
         }
         if pressed(ctx, Modifiers::NONE, Key::Delete) {
-            self.clear_region();
+            match self.selected_stamp.take() {
+                Some(i) => {
+                    if let Some(d) = self.docs.get_mut(self.current) {
+                        d.remove_shape(i);
+                    }
+                    self.tex_dirty = true;
+                }
+                None => self.clear_region(),
+            }
         }
     }
 }
@@ -578,6 +643,12 @@ impl eframe::App for App {
             // Developer hook: open a dialog on start-up (used for visual checks).
             match std::env::var("HSNAP_DIALOG").as_deref() {
                 Ok("pagesetup") => self.open_page_setup(),
+                Ok("stampobj") => {
+                    let img = image::RgbaImage::from_fn(400, 300, |x, y| image::Rgba([(x * 255 / 400) as u8, (y * 255 / 300) as u8, 120, 255]));
+                    self.new_document(img, "synthetic".into());
+                    let st = crate::stamps::Stamp { use_text: false, use_image: false, width: 120, height: 40, bg: [255, 0, 255, 255], placement: crate::stamps::Placement::OnPicture { h: 50, v: 40, from: crate::stamps::Anchor::TopLeft }, ..Default::default() };
+                    self.insert_stamp(&st, None);
+                }
                 Ok(k) if k.starts_with("filter:") => {
                     // A colourful synthetic image so the effect of each filter is visible.
                     let img = image::RgbaImage::from_fn(400, 300, |x, y| {
@@ -1192,6 +1263,17 @@ impl App {
                 ctx.set_cursor_icon(egui::CursorIcon::Crosshair);
             }
 
+            // Outline and corner handles of the selected stamp object.
+            if let Some(Kind::Stamp(o)) = self.selected_stamp.and_then(|i| self.docs[self.current].shapes().get(i)).map(|s| s.kind.clone()) {
+                let r = egui::Rect::from_min_max(to_ui(o.pos), to_ui((o.pos.0 + o.size.0 as f32, o.pos.1 + o.size.1 as f32)));
+                ui.painter().rect_stroke(r, 0.0, Stroke::new(1.5, Color32::from_rgb(40, 120, 255)), egui::StrokeKind::Outside);
+                for c in [r.left_top(), r.right_top(), r.left_bottom(), r.right_bottom()] {
+                    let h = egui::Rect::from_center_size(c, egui::vec2(8.0, 8.0));
+                    ui.painter().rect_filled(h, 1.0, Color32::WHITE);
+                    ui.painter().rect_stroke(h, 1.0, Stroke::new(1.5, Color32::from_rgb(40, 120, 255)), egui::StrokeKind::Inside);
+                }
+            }
+
             // Selection overlay.
             if let Some(s) = self.selection {
                 let r = egui::Rect::from_min_max(to_ui((s.x as f32, s.y as f32)), to_ui(((s.x + s.w) as f32, (s.y + s.h) as f32)));
@@ -1261,8 +1343,88 @@ impl App {
         }
     }
 
+    /// Select-tool handling of stamp objects. Returns true when the gesture belonged to a stamp.
+    fn stamp_interaction(&mut self, ui: &egui::Ui, resp: &egui::Response, to_img: &dyn Fn(Pos2) -> Pt, ppp: f32, zoom: f32) -> bool {
+        let tol = 8.0 * ppp / zoom; // handle size on screen, in image pixels
+        if resp.drag_started_by(egui::PointerButton::Primary) {
+            let press = ui.input(|i| i.pointer.press_origin()).map(to_img);
+            if let (Some(p), Some(doc)) = (press, self.docs.get(self.current)) {
+                let mut found = None; // (index, corner)
+                if let Some(i) = self.selected_stamp {
+                    if let Some(Kind::Stamp(o)) = doc.shapes().get(i).map(|s| &s.kind) {
+                        if let Some(c) = corner_at(o, p, tol) {
+                            found = Some((i, Some(c)));
+                        }
+                    }
+                }
+                if found.is_none() {
+                    found = doc.stamp_at(p).map(|i| (i, None));
+                }
+                if let Some((i, resize)) = found {
+                    if let Some(Kind::Stamp(o)) = doc.shapes().get(i).map(|s| &s.kind) {
+                        self.stamp_drag = Some(StampDrag { resize, start_ptr: p, start_pos: o.pos, start_size: o.size });
+                        self.selected_stamp = Some(i);
+                        self.docs[self.current].begin_change();
+                    }
+                }
+            }
+        }
+        if let Some(d) = self.stamp_drag {
+            if resp.dragged() {
+                if let (Some(ptr), Some(i)) = (resp.interact_pointer_pos().map(to_img), self.selected_stamp) {
+                    let (dx, dy) = (ptr.0 - d.start_ptr.0, ptr.1 - d.start_ptr.1);
+                    let shift = ui.input(|i| i.modifiers.shift);
+                    if let Some(Shape { kind: Kind::Stamp(o), .. }) = self.docs[self.current].shape_mut(i) {
+                        match d.resize {
+                            None => o.pos = (d.start_pos.0 + dx, d.start_pos.1 + dy),
+                            Some(c) => (o.pos, o.size) = resized(d.start_pos, d.start_size, c, dx, dy, shift),
+                        }
+                    }
+                    self.tex_dirty = true;
+                }
+            }
+            if resp.drag_stopped() {
+                self.stamp_drag = None;
+            }
+            return true;
+        }
+        let hit = resp.interact_pointer_pos().map(to_img).and_then(|p| self.docs.get(self.current).and_then(|d| d.stamp_at(p)));
+        if resp.double_clicked() {
+            if let Some(i) = hit {
+                self.open_stamp_editor(i);
+                return true;
+            }
+        }
+        if resp.clicked() {
+            self.selected_stamp = hit;
+            return hit.is_some();
+        }
+        false
+    }
+
+    fn open_stamp_editor(&mut self, i: usize) {
+        let Some(Kind::Stamp(o)) = self.docs.get(self.current).and_then(|d| d.shapes().get(i)).map(|s| s.kind.clone()) else { return };
+        let dir = std::path::PathBuf::from(self.settings().stamps_dir);
+        let pic = o.picture.as_deref().cloned();
+        self.dialog = Dialog::Stamps(Box::new(crate::stamps_ui::Manager::for_instance(dir, i, o.stamp, pic)));
+    }
+
+    /// Apply an edited stamp to the object it came from (this instance only; the saved stamp is untouched).
+    pub fn update_stamp_instance(&mut self, i: usize, stamp: &crate::stamps::Stamp, picture: Option<&RgbaImage>) {
+        let Some(doc) = self.docs.get_mut(self.current) else { return };
+        doc.begin_change();
+        if let Some(Shape { kind: Kind::Stamp(o), .. }) = doc.shape_mut(i) {
+            let pos = o.pos;
+            *o = editor::StampObject::new(stamp, picture, o.macros.clone(), pos);
+        }
+        self.tex_dirty = true;
+    }
+
     fn drag_tool(&mut self, ui: &mut egui::Ui, resp: &egui::Response, to_img: &dyn Fn(Pos2) -> Pt, to_ui: &dyn Fn(Pt) -> Pos2, ppp: f32, zoom: f32) {
         let tool = self.tool;
+        if tool == Tool::Select && self.stamp_interaction(ui, resp, to_img, ppp, zoom) {
+            return;
+        }
         let freeform = matches!(tool, Tool::Freehand | Tool::Eraser | Tool::Airbrush);
         if resp.drag_started_by(egui::PointerButton::Primary) {
             if let Some(p) = resp.interact_pointer_pos() {
@@ -1375,5 +1537,47 @@ impl App {
             }
             self.tex_dirty = true;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dragging_the_bottom_right_corner_grows_the_stamp_in_place() {
+        let (pos, size) = resized((10.0, 20.0), (40, 30), 3, 10.0, 5.0, false);
+        assert_eq!((pos, size), ((10.0, 20.0), (50, 35)));
+    }
+
+    #[test]
+    fn dragging_the_top_left_corner_keeps_the_opposite_corner_fixed() {
+        let (pos, size) = resized((10.0, 20.0), (40, 30), 0, 10.0, 10.0, false);
+        assert_eq!(size, (30, 20));
+        assert_eq!((pos.0 + size.0 as f32, pos.1 + size.1 as f32), (50.0, 50.0)); // bottom-right unchanged
+        let (pos, size) = resized((10.0, 20.0), (40, 30), 1, 10.0, -10.0, false); // top-right
+        assert_eq!((pos.0, size), (10.0, (50, 40)));
+        assert_eq!(pos.1 + size.1 as f32, 50.0); // bottom edge stays
+    }
+
+    #[test]
+    fn shift_keeps_the_aspect_ratio_and_size_has_a_floor() {
+        let (_, size) = resized((0.0, 0.0), (40, 20), 3, 20.0, 0.0, true);
+        assert_eq!(size, (60, 30));
+        let (_, size) = resized((0.0, 0.0), (40, 20), 3, -100.0, -100.0, false);
+        assert_eq!(size, (4, 4));
+    }
+
+    #[test]
+    fn corner_hit_testing() {
+        let o = editor::StampObject::new(
+            &crate::stamps::Stamp { use_text: false, use_image: false, width: 40, height: 20, ..Default::default() },
+            None,
+            crate::stamps::MacroCtx { file: String::new(), path: String::new(), user: String::new(), date: String::new(), time: String::new() },
+            (100.0, 50.0),
+        );
+        assert_eq!(corner_at(&o, (101.0, 52.0), 4.0), Some(0));
+        assert_eq!(corner_at(&o, (139.0, 71.0), 4.0), Some(3));
+        assert_eq!(corner_at(&o, (120.0, 60.0), 4.0), None);
     }
 }

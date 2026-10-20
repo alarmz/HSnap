@@ -109,6 +109,7 @@ impl Default for Stamp {
 }
 
 /// Values the text macros expand to.
+#[derive(Clone, Debug, PartialEq)]
 pub struct MacroCtx {
     pub file: String,
     pub path: String,
@@ -240,6 +241,16 @@ pub fn anchor_position(base: (u32, u32), size: (u32, u32), h: i32, v: i32, from:
     (x, y)
 }
 
+/// Where a stamp of `size` goes on an image of `base` size; `None` for the header/footer placements,
+/// which change the canvas instead.
+pub fn placement_position(p: Placement, base: (u32, u32), size: (u32, u32), selection: Option<(u32, u32, u32, u32)>) -> Option<(i64, i64)> {
+    match p {
+        Placement::ExtendTop | Placement::ExtendBottom => None,
+        Placement::AtSelection => Some(selection.map_or((0, 0), |(x, y, _, _)| (x as i64, y as i64))),
+        Placement::OnPicture { h, v, from } => Some(anchor_position(base, size, h, v, from)),
+    }
+}
+
 /// Place a stamp on an image. `selection` is (x, y, w, h) in image pixels.
 pub fn apply(base: &RgbaImage, stamp: &Stamp, picture: Option<&RgbaImage>, m: &MacroCtx, selection: Option<(u32, u32, u32, u32)>) -> RgbaImage {
     match stamp.placement {
@@ -364,6 +375,15 @@ mod tests {
         assert_eq!(anchor_position((200, 100), (40, 20), 10, 5, Anchor::TopLeft), (10, 5));
         // Centre: 10 right and 20 down of the exact centre.
         assert_eq!(anchor_position((200, 100), (40, 20), 10, 20, Anchor::Center), (90, 60));
+    }
+
+    #[test]
+    fn placement_positions() {
+        let sel = Some((7, 9, 20, 20));
+        assert_eq!(placement_position(Placement::AtSelection, (100, 80), (10, 10), sel), Some((7, 9)));
+        assert_eq!(placement_position(Placement::AtSelection, (100, 80), (10, 10), None), Some((0, 0)));
+        assert_eq!(placement_position(Placement::OnPicture { h: 5, v: 5, from: Anchor::BottomRight }, (100, 80), (10, 10), None), Some((85, 65)));
+        assert_eq!(placement_position(Placement::ExtendTop, (100, 80), (10, 10), None), None);
     }
 
     #[test]

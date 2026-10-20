@@ -31,12 +31,22 @@ pub struct Manager {
     editor: Option<Editor>,
     preview: Option<(String, egui::TextureHandle)>,
     error: Option<String>,
+    /// Editing the stamp object at this index of the open image, not a saved stamp.
+    instance: Option<usize>,
 }
 
 impl Manager {
     pub fn new(dir: PathBuf) -> Self {
-        let mut m = Self { dir, list: vec![], sel: None, editor: None, preview: None, error: None };
+        let mut m = Self { dir, list: vec![], sel: None, editor: None, preview: None, error: None, instance: None };
         m.refresh();
+        m
+    }
+
+    /// Editor for one stamp object on the image; OK changes only that instance.
+    pub fn for_instance(dir: PathBuf, index: usize, stamp: Stamp, picture: Option<RgbaImage>) -> Self {
+        let mut m = Self::new(dir);
+        m.instance = Some(index);
+        m.editor = Some(Editor { stamp, picture, tab: 1, mode: SaveMode::Save, tex: None });
         m
     }
 
@@ -89,6 +99,10 @@ fn show_image(ui: &mut egui::Ui, id: egui::TextureId, size: (u32, u32), max_w: f
 }
 
 pub fn stamps(app: &mut App, ctx: &egui::Context, m: &mut Manager) -> bool {
+    if m.instance.is_some() {
+        editor_window(app, ctx, m);
+        return m.editor.is_some();
+    }
     let mut open = true;
     let mut insert = None::<usize>;
     egui::Window::new("Stamps").open(&mut open).collapsible(false).default_width(520.0).show(ctx, |ui| {
@@ -205,6 +219,7 @@ pub fn stamps(app: &mut App, ctx: &egui::Context, m: &mut Manager) -> bool {
 }
 
 fn editor_window(app: &mut App, ctx: &egui::Context, m: &mut Manager) {
+    let instance = m.instance;
     let Some(ed) = m.editor.as_mut() else { return };
     let (mut ok, mut cancel) = (false, false);
     let mut open = true;
@@ -357,18 +372,26 @@ fn editor_window(app: &mut App, ctx: &egui::Context, m: &mut Manager) {
         let id = texture(ctx, &mut ed.tex, key, &img);
         show_image(ui, id, img.dimensions(), 440.0);
         ui.separator();
-        ui.horizontal(|ui| {
-            ui.radio_value(&mut ed.mode, SaveMode::Save, "Save stamp");
-            ui.radio_value(&mut ed.mode, SaveMode::Insert, "Insert on picture");
-            ui.radio_value(&mut ed.mode, SaveMode::Both, "Insert and save");
-        });
+        if instance.is_some() {
+            ui.weak("Changes apply to this stamp on the image only; the saved stamp is not modified.");
+        } else {
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut ed.mode, SaveMode::Save, "Save stamp");
+                ui.radio_value(&mut ed.mode, SaveMode::Insert, "Insert on picture");
+                ui.radio_value(&mut ed.mode, SaveMode::Both, "Insert and save");
+            });
+        }
         ui.horizontal(|ui| {
             ok = ui.button("OK").clicked();
             cancel = ui.button("Cancel").clicked();
         });
     });
 
-    if ok {
+    if ok && instance.is_some() {
+        let (stamp, pic) = (ed.stamp.clone(), ed.picture.clone());
+        app.update_stamp_instance(instance.unwrap_or(0), &stamp, pic.as_ref());
+        m.editor = None;
+    } else if ok {
         let (stamp, pic, mode) = (ed.stamp.clone(), ed.picture.clone(), ed.mode);
         let mut done = true;
         if mode != SaveMode::Insert {
