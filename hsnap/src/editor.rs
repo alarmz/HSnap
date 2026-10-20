@@ -562,31 +562,55 @@ pub fn fill_rect(img: &mut RgbaImage, x: u32, y: u32, w: u32, h: u32, color: [u8
     }
 }
 
-/// The UI font used for drawn text and stamps, read once.
-fn load_font() -> Option<FontArc> {
-    static FONT: std::sync::OnceLock<Option<FontArc>> = std::sync::OnceLock::new();
-    FONT.get_or_init(|| {
-        for p in [r"C:\Windows\Fonts\segoeui.ttf", r"C:\Windows\Fonts\arial.ttf"] {
+/// Fonts for drawn text and stamps, read once: a Latin font first, then CJK fallbacks (TrueType collections
+/// use their first face). Characters are drawn with the first font that has a glyph for them.
+pub fn fonts() -> &'static Vec<FontArc> {
+    static FONTS: std::sync::OnceLock<Vec<FontArc>> = std::sync::OnceLock::new();
+    FONTS.get_or_init(|| {
+        let mut v = vec![];
+        for p in [
+            r"C:\Windows\Fonts\segoeui.ttf",
+            r"C:\Windows\Fonts\arial.ttf",
+            r"C:\Windows\Fonts\msjh.ttc",  // Microsoft JhengHei (Traditional Chinese)
+            r"C:\Windows\Fonts\msyh.ttc",  // Microsoft YaHei (Simplified Chinese)
+            r"C:\Windows\Fonts\mingliu.ttc",
+            r"C:\Windows\Fonts\simsun.ttc",
+            r"C:\Windows\Fonts\malgun.ttf", // Korean
+            r"C:\Windows\Fonts\meiryo.ttc", // Japanese
+        ] {
             if let Ok(bytes) = std::fs::read(p) {
-                if let Ok(f) = FontArc::try_from_vec(bytes) {
-                    return Some(f);
+                if let Ok(f) = ab_glyph::FontVec::try_from_vec_and_index(bytes, 0) {
+                    v.push(FontArc::from(f));
                 }
             }
         }
-        None
+        v
     })
-    .clone()
+}
+
+/// The primary font (line metrics come from it).
+fn load_font() -> Option<FontArc> {
+    fonts().first().cloned()
+}
+
+/// The first font with a glyph for `c`, or the primary font (which draws its "missing" box).
+fn font_for(c: char) -> Option<&'static FontArc> {
+    let all = fonts();
+    all.iter().find(|f| f.glyph_id(c).0 != 0).or_else(|| all.first())
 }
 
 /// Advance width of `text` at pixel size `size`.
 pub fn text_width(size: f32, text: &str) -> f32 {
-    match load_font() {
-        Some(f) => {
-            let s = f.as_scaled(PxScale::from(size));
-            text.chars().map(|c| s.h_advance(s.glyph_id(c))).sum()
-        }
-        None => text.chars().count() as f32 * size * 0.5,
+    if fonts().is_empty() {
+        return text.chars().count() as f32 * size * 0.5;
     }
+    text.chars()
+        .filter_map(|c| font_for(c).map(|f| (f, c)))
+        .map(|(f, c)| {
+            let s = f.as_scaled(PxScale::from(size));
+            s.h_advance(s.glyph_id(c))
+        })
+        .sum()
 }
 
 /// Height of one text line at pixel size `size`.
@@ -629,11 +653,13 @@ pub fn wrap_text(size: f32, text: &str, max_w: f32) -> Vec<String> {
 }
 
 pub fn draw_text(img: &mut RgbaImage, p: Pt, text: &str, size: f32, c: Rgba<u8>) {
-    let Some(font) = load_font() else { return };
-    let scaled = font.as_scaled(PxScale::from(size));
+    let Some(primary) = load_font() else { return };
+    let ascent = primary.as_scaled(PxScale::from(size)).ascent();
     let mut x = p.0;
-    let y = p.1 + scaled.ascent();
+    let y = p.1 + ascent;
     for ch in text.chars() {
+        let Some(font) = font_for(ch) else { continue };
+        let scaled = font.as_scaled(PxScale::from(size));
         let mut g = scaled.scaled_glyph(ch);
         g.position = ab_glyph::point(x, y);
         x += scaled.h_advance(g.id);
@@ -823,9 +849,40 @@ mod tests {
     }
 
     #[test]
+    fn chinese_text_has_width_and_draws_real_glyphs() {
+        // Needs a CJK font on the machine (Windows ships Microsoft JhengHei / YaHei).
+        if fonts().len() < 3 {
+            return;
+        }
+        let w = text_width(20.0, "中文測試");
+        assert!(w > 60.0, "four CJK characters should be about four em wide, got {w}");
+        // Some installed font really has these ideographs, so they are not drawn as "missing glyph" boxes.
+        for c in ['中', '文', '測', '試'] {
+            assert!(font_for(c).is_some_and(|f| f.glyph_id(c).0 != 0), "no font has a glyph for {c}");
+        }
+        let mut img = RgbaImage::from_pixel(120, 40, Rgba([255, 255, 255, 255]));
+        draw_text(&mut img, (4.0, 4.0), "中文", 24.0, Rgba([0, 0, 0, 255]));
+        assert!(img.pixels().filter(|p| p[0] < 200).count() > 80, "nothing was drawn");
+        // Latin text is unchanged by the fallback chain.
+        assert!(text_width(20.0, "Hello") > 30.0);
+    }
+
+    #[test]
     fn crop_clamps() {
         let mut d = doc();
         d.crop(15, 5, 100, 100);
         assert_eq!(d.image().dimensions(), (5, 5));
+    }
+}
+
+#[cfg(test)]
+mod font_checks {
+    /// The Chinese test above skips itself when no CJK font is installed; make sure that cannot happen silently
+    /// on a machine that does have one.
+    #[test]
+    fn installed_cjk_font_is_picked_up() {
+        if std::path::Path::new(r"C:\Windows\Fonts\msjh.ttc").exists() {
+            assert!(super::fonts().len() >= 3, "msjh.ttc exists but only {} fonts loaded", super::fonts().len());
+        }
     }
 }

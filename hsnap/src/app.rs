@@ -135,7 +135,27 @@ pub struct App {
 }
 
 impl App {
+    /// Add system CJK fonts as fallbacks, so Chinese, Japanese and Korean text is not drawn as boxes.
+    fn install_cjk_fonts(ctx: &egui::Context) {
+        let mut fonts = egui::FontDefinitions::default();
+        for (name, path) in [
+            ("jhenghei", r"C:\Windows\Fonts\msjh.ttc"),
+            ("yahei", r"C:\Windows\Fonts\msyh.ttc"),
+            ("malgun", r"C:\Windows\Fonts\malgun.ttf"),
+            ("meiryo", r"C:\Windows\Fonts\meiryo.ttc"),
+        ] {
+            if let Ok(bytes) = std::fs::read(path) {
+                fonts.font_data.insert(name.into(), std::sync::Arc::new(egui::FontData::from_owned(bytes)));
+                for family in [egui::FontFamily::Proportional, egui::FontFamily::Monospace] {
+                    fonts.families.entry(family).or_default().push(name.into());
+                }
+            }
+        }
+        ctx.set_fonts(fonts);
+    }
+
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        Self::install_cjk_fonts(&cc.egui_ctx);
         let (tx, rx) = std::sync::mpsc::channel();
         let (msg_tx, msgs) = std::sync::mpsc::channel();
         let settings = Settings::load();
@@ -651,6 +671,14 @@ impl eframe::App for App {
             // Developer hook: open a dialog on start-up (used for visual checks).
             match std::env::var("HSNAP_DIALOG").as_deref() {
                 Ok("pagesetup") => self.open_page_setup(),
+                Ok("blank") => self.new_document(image::RgbaImage::from_pixel(400, 300, image::Rgba([255, 255, 255, 255])), "blank".into()),
+                Ok("gradient") => {
+                    let img = image::RgbaImage::from_fn(400, 300, |x, y| image::Rgba([(x * 255 / 400) as u8, (y * 255 / 300) as u8, 120, 255]));
+                    self.new_document(img, "gradient".into());
+                }
+                Ok("textscroll") => self.svc.capture(CaptureMode::TextWindowScroll),
+                Ok("textregionscroll") => self.svc.capture(CaptureMode::TextRegionScroll),
+                Ok("buttonpick") => self.svc.capture(CaptureMode::Button),
                 Ok(k) if k.starts_with("tab:") => {
                     let tab = k[4..].parse().unwrap_or(0);
                     self.dialog = Dialog::CaptureSettings { tab, draft: Box::new(self.settings()) };
@@ -707,7 +735,9 @@ impl eframe::App for App {
                 Ok("textsettings") => self.dialog = Dialog::CaptureSettings { tab: 5, draft: Box::new(self.settings()) },
                 Ok("textwindow") => {
                     self.text_buffer = "Sample captured text
-Second line	column two".into();
+Second line	column two
+中文測試:發票 2026-10 總計 4,580 元
+日本語 한국어".into();
                     self.dialog = Dialog::Text;
                 }
                 Ok("textregion") => self.svc.capture(CaptureMode::TextRegion),
@@ -718,6 +748,17 @@ Second line	column two".into();
                     self.dialog = Dialog::PrintPreview { prev: Box::new(p), page: 0 };
                 }
                 _ => {}
+            }
+            // `hsnap <image file>` opens that image on start-up.
+            if let Some(p) = std::env::args().nth(1).filter(|p| !p.starts_with("--")) {
+                let path = std::path::PathBuf::from(p);
+                if path.is_file() {
+                    self.open_path(path);
+                }
+            }
+            // Developer hook: save the current image to this path (exercises the same code as Save As).
+            if let (Ok(p), false) = (std::env::var("HSNAP_SAVETO"), self.docs.is_empty()) {
+                self.save_to(std::path::PathBuf::from(p));
             }
             if self.settings().start_minimized {
                 let cmd = if self.tray.is_some() { egui::ViewportCommand::Visible(false) } else { egui::ViewportCommand::Minimized(true) };
@@ -1467,7 +1508,9 @@ impl App {
         }
         let freeform = matches!(tool, Tool::Freehand | Tool::Eraser | Tool::Airbrush);
         if resp.drag_started_by(egui::PointerButton::Primary) {
-            if let Some(p) = resp.interact_pointer_pos() {
+            // egui reports the drag only after the pointer has moved a little; the stroke starts where the button went down.
+            let start = ui.input(|i| i.pointer.press_origin()).or_else(|| resp.interact_pointer_pos());
+            if let Some(p) = start {
                 self.drag = Some(vec![to_img(p)]);
             }
         }
