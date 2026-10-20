@@ -116,6 +116,20 @@ pub fn visible_windows() -> Vec<WindowEntry> {
     v
 }
 
+/// Grow (or, with negative values, shrink) a rectangle by left, top, right, bottom pixels; never below 1x1.
+pub fn expand_rect(r: Rect, m: [i32; 4]) -> Rect {
+    Rect { x: r.x - m[0], y: r.y - m[1], w: (r.w + m[0] + m[2]).max(1), h: (r.h + m[1] + m[3]).max(1) }
+}
+
+/// Capture the control under `pt` as it looks right now (so hover and pressed states show), enlarged by
+/// `margins`. Returns the image and the screen rectangle that was captured.
+pub fn capture_control_at(pt: (i32, i32), margins: [i32; 4], include_cursor: bool) -> Result<(RgbaImage, Rect), String> {
+    let windows = visible_windows();
+    let r = target_at(&windows, pt.0, pt.1, true).ok_or("nothing under the pointer")?;
+    let r = expand_rect(r, margins);
+    capture_rect(r, include_cursor).map(|img| (img, r))
+}
+
 /// What the pointer is over: the front-most window containing it, or (with `children`) the
 /// smallest control of that window containing it.
 pub fn target_at(windows: &[WindowEntry], x: i32, y: i32, children: bool) -> Option<Rect> {
@@ -296,6 +310,13 @@ mod tests {
         assert_eq!(target_at(&w, 120, 120, true), Some(r(50, 50, 100, 100)));
         assert_eq!(target_at(&w, 70, 70, true), Some(r(0, 0, 100, 100))); // child of the rear window is hidden
         assert_eq!(target_at(&w, 500, 500, true), None);
+    }
+
+    #[test]
+    fn margins_grow_and_shrink_the_rectangle() {
+        assert_eq!(expand_rect(r(10, 10, 20, 8), [1, 2, 3, 4]), r(9, 8, 24, 14));
+        assert_eq!(expand_rect(r(10, 10, 20, 8), [-2, -2, -2, -2]), r(12, 12, 16, 4));
+        assert_eq!(expand_rect(r(10, 10, 4, 4), [-9, -9, -9, -9]).w, 1); // never vanishes
     }
 
     #[test]

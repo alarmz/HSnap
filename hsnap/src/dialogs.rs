@@ -25,7 +25,7 @@ pub enum Dialog {
     Resolution { h: f32, v: f32, apply: bool, make_default: bool },
 }
 
-const TABS: [&str; 6] = ["Capture", "Region", "View & Edit", "Copy & Print", "QuickSave", "TextSnap"];
+const TABS: [&str; 8] = ["Capture", "Region", "View & Edit", "Copy & Print", "QuickSave", "TextSnap", "Crop & Scale", "Button"];
 
 pub fn show(app: &mut App, ctx: &egui::Context) {
     let mut dialog = std::mem::replace(&mut app.dialog, Dialog::None);
@@ -120,6 +120,7 @@ fn scale(app: &mut App, ctx: &egui::Context, w: &mut u32, h: &mut u32, keep: &mu
 fn capture_settings(app: &mut App, ctx: &egui::Context, tab: &mut usize, d: &mut Settings) -> bool {
     let mut open = true;
     let (mut ok, mut cancel, mut apply) = (false, false, false);
+    let selection = app.selection_px();
     egui::Window::new("Capture Settings").open(&mut open).collapsible(false).default_width(480.0).show(ctx, |ui| {
         ui.horizontal(|ui| {
             for (i, t) in TABS.iter().enumerate() {
@@ -201,6 +202,85 @@ fn capture_settings(app: &mut App, ctx: &egui::Context, tab: &mut usize, d: &mut
                     });
                 });
                 ui.weak("Auto-scroll for objects under the cursor is not implemented.");
+            }
+            6 => {
+                ui.checkbox(&mut d.crop.enabled, "Crop image");
+                ui.add_enabled_ui(d.crop.enabled, |ui| {
+                    egui::Grid::new("crop").num_columns(4).spacing([10.0, 6.0]).show(ui, |ui| {
+                        ui.label("From left");
+                        ui.add(egui::DragValue::new(&mut d.crop.left).range(0..=30_000));
+                        ui.label("From top");
+                        ui.add(egui::DragValue::new(&mut d.crop.top).range(0..=30_000));
+                        ui.end_row();
+                        ui.label("Width");
+                        ui.add(egui::DragValue::new(&mut d.crop.width).range(0..=30_000));
+                        ui.label("Height");
+                        ui.add(egui::DragValue::new(&mut d.crop.height).range(0..=30_000));
+                        ui.end_row();
+                    });
+                    if ui.add_enabled(selection.is_some(), egui::Button::new("Set to current selection rectangle")).clicked() {
+                        if let Some((x, y, w, h)) = selection {
+                            (d.crop.left, d.crop.top, d.crop.width, d.crop.height) = (x, y, w, h);
+                        }
+                    }
+                });
+                ui.separator();
+                ui.checkbox(&mut d.scale.enabled, "Scale image");
+                ui.add_enabled_ui(d.scale.enabled, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.radio_value(&mut d.scale.in_pixels, true, "In pixels");
+                        ui.radio_value(&mut d.scale.in_pixels, false, "Scale factor");
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Width");
+                        if d.scale.in_pixels {
+                            ui.add(egui::DragValue::new(&mut d.scale.width).range(1.0..=30_000.0).speed(1.0).fixed_decimals(0));
+                        } else {
+                            ui.add(egui::DragValue::new(&mut d.scale.width).range(0.01..=50.0).speed(0.01).fixed_decimals(2));
+                        }
+                        ui.add_enabled_ui(!d.scale.keep_aspect, |ui| {
+                            ui.label("Height");
+                            if d.scale.in_pixels {
+                                ui.add(egui::DragValue::new(&mut d.scale.height).range(1.0..=30_000.0).speed(1.0).fixed_decimals(0));
+                            } else {
+                                ui.add(egui::DragValue::new(&mut d.scale.height).range(0.01..=50.0).speed(0.01).fixed_decimals(2));
+                            }
+                        });
+                    });
+                    if ui.add_enabled(selection.is_some(), egui::Button::new("Set scale to current selection rectangle")).clicked() {
+                        if let Some((_, _, w, h)) = selection {
+                            d.scale.in_pixels = true;
+                            (d.scale.width, d.scale.height) = (w as f32, h as f32);
+                        }
+                    }
+                    ui.checkbox(&mut d.scale.keep_aspect, "Keep aspect (height follows the width)");
+                    ui.checkbox(&mut d.scale.interpolate, "Interpolate (smooth scaling)");
+                });
+                ui.weak("Crop runs first, then scale; both apply to every new capture.");
+            }
+            7 => {
+                ui.label("Extra pixels captured around a button (negative values shrink the area):");
+                egui::Grid::new("btn").num_columns(4).spacing([10.0, 6.0]).show(ui, |ui| {
+                    for (label, i) in [("Left", 0), ("Top", 1), ("Right", 2), ("Bottom", 3)] {
+                        ui.label(label);
+                        ui.add(egui::DragValue::new(&mut d.button_margins[i]).range(-100..=100));
+                        if i % 2 == 1 {
+                            ui.end_row();
+                        }
+                    }
+                });
+                ui.horizontal(|ui| {
+                    if ui.button("  -  ").on_hover_text("Decrease all four by one").clicked() {
+                        d.button_margins.iter_mut().for_each(|m| *m -= 1);
+                    }
+                    if ui.button("Reset").clicked() {
+                        d.button_margins = [0; 4];
+                    }
+                    if ui.button("  +  ").on_hover_text("Increase all four by one").clicked() {
+                        d.button_margins.iter_mut().for_each(|m| *m += 1);
+                    }
+                });
+                ui.weak("Capture > Button picks a control on a frozen screen; Button under Cursor (live) captures it as it looks now, so hover and pressed states show.");
             }
             _ => {
                 ui.checkbox(&mut d.quicksave, "Automatically save each capture");

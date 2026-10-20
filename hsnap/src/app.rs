@@ -276,6 +276,7 @@ impl App {
             return;
         }
         let s = self.settings();
+        c.img = crate::autoprocess::process(&c.img, &s.crop, &s.scale);
         c.img = crate::filter_ui::auto_filters(c.img, &s);
         let store = crate::stamps::Store { dir: std::path::PathBuf::from(&s.stamps_dir) };
         for st in store.list().into_iter().filter(|st| st.auto_add) {
@@ -409,6 +410,11 @@ impl App {
     fn new_shape_shadow(&self) -> Option<editor::ShapeShadow> {
         let s = self.settings().shadow;
         s.auto_shapes.then(|| editor::ShapeShadow::from_params(s.size, s.shade, s.diffusion, s.direction))
+    }
+
+    /// The current selection as (x, y, w, h) in image pixels, if there is one.
+    pub fn selection_px(&self) -> Option<(u32, u32, u32, u32)> {
+        if self.selection.is_some() { self.region() } else { None }
     }
 
     pub fn clear_selection(&mut self) {
@@ -645,6 +651,11 @@ impl eframe::App for App {
             // Developer hook: open a dialog on start-up (used for visual checks).
             match std::env::var("HSNAP_DIALOG").as_deref() {
                 Ok("pagesetup") => self.open_page_setup(),
+                Ok(k) if k.starts_with("tab:") => {
+                    let tab = k[4..].parse().unwrap_or(0);
+                    self.dialog = Dialog::CaptureSettings { tab, draft: Box::new(self.settings()) };
+                }
+                Ok("capturefull") => self.svc.capture(CaptureMode::Full),
                 Ok(k) if k.starts_with("arrow:") => {
                     let img = image::RgbaImage::from_pixel(400, 300, image::Rgba([240, 240, 240, 255]));
                     self.new_document(img, "synthetic".into());
@@ -877,7 +888,8 @@ impl App {
                 self.capture_item(ui, "Virtual Desktop", CaptureMode::Virtual);
                 self.capture_item(ui, "Window or Control", CaptureMode::Window);
                 self.capture_item(ui, "Entire Page with Scrolling	Ctrl+Shift+S", CaptureMode::Scroll);
-                todo_item(ui, "Button");
+                self.capture_item(ui, "Button", CaptureMode::Button);
+                self.capture_item(ui, "Button under Cursor (live)", CaptureMode::ButtonLive);
                 self.capture_item(ui, "Active Window", CaptureMode::Active);
                 self.capture_item(ui, "Active Window without Frame", CaptureMode::ActiveNoFrame);
                 ui.separator();

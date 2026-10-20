@@ -31,6 +31,10 @@ pub enum CaptureMode {
     Multi,
     Pan,
     Scroll,
+    /// Pick a control on a frozen screen.
+    Button,
+    /// The control under the pointer, captured live so hover and pressed states show.
+    ButtonLive,
     TextRegion,
     TextObject,
     TextWindowScroll,
@@ -89,6 +93,10 @@ pub struct Settings {
     pub subst: crate::filters::SubstTable,
     /// Resolution given to newly captured images, dots per inch.
     pub default_dpi: (f32, f32),
+    pub crop: crate::autoprocess::CropParams,
+    pub scale: crate::autoprocess::ScaleParams,
+    /// Extra pixels around a captured button: left, top, right, bottom (negative shrinks).
+    pub button_margins: [i32; 4],
 }
 
 /// What happens with each new capture (View & Edit tab).
@@ -150,6 +158,9 @@ impl Default for Settings {
             frame: Default::default(),
             subst: Default::default(),
             default_dpi: (96.0, 96.0),
+            crop: Default::default(),
+            scale: Default::default(),
+            button_margins: [0; 4],
         }
     }
 }
@@ -375,6 +386,15 @@ fn capture_mode(m: CaptureMode, s: &Settings, pan: Option<(i32, i32)>) -> Result
         CaptureMode::Active => (capture::capture_active_window(cur)?, Last::Mode(m), "Active window"),
         CaptureMode::ActiveNoFrame => (capture::capture_active_client(cur)?, Last::Mode(m), "Active window without frame"),
         CaptureMode::Cursor => (capture::capture_cursor_only(s.background)?, Last::Mode(m), "Cursor"),
+        CaptureMode::Button => {
+            let (_, rect) = run_picker(picker::Mode::Window, s, None)?;
+            let r = capture::expand_rect(rect.ok_or("no control picked")?, s.button_margins);
+            (capture::capture_rect(r, cur)?, Last::Rect(r), "Button")
+        }
+        CaptureMode::ButtonLive => {
+            let (img, r) = capture::capture_control_at(capture::cursor_pos(), s.button_margins, cur)?;
+            (img, Last::Rect(r), "Button")
+        }
         // Text modes are handled before this function (they produce text, not an image).
         CaptureMode::TextRegion | CaptureMode::TextObject | CaptureMode::TextWindowScroll | CaptureMode::TextRegionScroll => return Err("text capture has no image".into()),
         CaptureMode::Scroll => {

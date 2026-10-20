@@ -9,6 +9,8 @@ HSnap is a clean-room Rust rewrite; nothing was copied from the original program
 - **S** — run for real and looked at (screenshot, real window, real file, real printer driver)
 - **C** — compiles and is wired in, but never exercised (no test, never clicked)
 
+**Totals** (108 rows): ✅ 74 · 🟡 14 · ❌ 18 · ➖ 2
+
 A row can have several letters, e.g. `T S`. "C" is the honest default for anything that is only menu glue.
 
 ## File
@@ -54,9 +56,9 @@ A row can have several letters, e.g. `T S`. "C" is the honest default for anythi
 |---|---|---|---|
 | Full Screen (monitor under pointer) | ✅ | S | Capture primitive verified headless; the menu/hot-key path was not clicked |
 | Virtual Desktop | ✅ | S | Headless capture checked |
-| Window or Control | 🟡 | S | Top-level windows only, no child controls (buttons, panes) |
+| Window or Control | ✅ | T S | Picks the innermost child control under the pointer (buttons, panes), or the whole window from its title bar. Checked with real clicks on Notepad: text area gave the edit control, title bar the window. Controls that are not real child windows (many modern/web apps) fall back to the whole window |
 | Entire Page with Scrolling | ✅ | T S | Headless run on a 300-line Notepad document: seamless, ends on the last line. The full GUI path (overlay click → scroll) was not run. Sticky headers/footers and animated areas break stitching (as the manual also warns) |
-| Button | ❌ | – | Greyed out; also the "Button" settings tab |
+| Button | ✅ | T S | Two ways: **Button** (pick on a frozen screen) and **Button under Cursor (live)** (captures hover/pressed states). The live path was verified on a real dialog button with margins +2, −1 and 5-left (sizes exact); the frozen-screen picker path was not clicked |
 | Active Window | ✅ | S | Headless capture checked |
 | Active Window without Frame | ✅ | C | Client area of the foreground window |
 | Region (drag or two clicks, magnifier) | ✅ | S | End to end with synthetic mouse input; sizes exact |
@@ -68,7 +70,7 @@ A row can have several letters, e.g. `T S`. "C" is the honest default for anythi
 | Extended Active Window | ❌ | – | Greyed out |
 | Enable Video or Game Capture (DirectX/Glide) | ❌ | – | Greyed out |
 | Auto-capture every N seconds (+ Shift+F11 to stop) | ✅ | C | |
-| Capture Settings dialog | 🟡 | S | Tabs: Capture, Region, View & Edit, Copy & Print, QuickSave, TextSnap. Missing: Crop & Scale tab, Button tab, "turn off font smoothing", "clear Vista transparency", paste-to-another-window options |
+| Capture Settings dialog | 🟡 | S | Tabs: Capture, Region, View & Edit, Copy & Print, QuickSave, TextSnap, **Crop & Scale**, **Button**. Crop & Scale verified with a real capture (50x30 crop ×2 = 100x60). Missing: "turn off font smoothing", "clear Vista transparency", paste-to-another-window options |
 | Shutter sound | 🟡 | C | Plays the system beep, not a camera sound |
 | Hide window before / restore after capture | ✅ | S | Seen working in the TextSnap run |
 | QuickSave (auto-increment names, printf names, loop, FTP) | 🟡 | T | Naming logic fully tested; GUI auto-save never run; FTP ❌ |
@@ -86,7 +88,7 @@ Default hot keys: manual defaults kept (Ctrl+Shift+R region, W window, M multi-r
 | Change Resolution (dpi) | ✅ | T S | Tag only, as in the manual; affects print size and saved files |
 | Scale | ✅ | C | Lanczos resize; dialog never clicked |
 | Auto-trim | ✅ | T | |
-| Stamps (manager, editor, macros, placement, auto-add) | 🟡 | T S | Core and editor dialog checked. Manager list/insert/delete were not exercised. Inserted stamps are baked in: no moving, resizing or double-click editing afterwards. "Edit Image" button missing. Own file format, not `.hs5stamp` |
+| Stamps (manager, editor, macros, placement, auto-add) | ✅ | T S | Stamps placed on the picture or at the selection stay objects: click selects, drag moves, corner drag resizes (Shift = keep aspect), double-click edits that instance only, Delete removes it — all checked with a real mouse. Header/footer stamps change the canvas and are applied to the pixels. Manager list/insert/delete via the UI not exercised. Own file format, not `.hs5stamp`; no "Edit Image" button |
 | Mirror, Rotate | ✅ | C | |
 | Shear | ✅ | T | Dialog never viewed |
 | Mosaic | ✅ | T | Dialog never viewed |
@@ -104,7 +106,7 @@ Default hot keys: manual defaults kept (Ctrl+Shift+R region, W window, M multi-r
 | Halftone | ✅ | T | Dialog never viewed |
 | Color Correction | ✅ | T | Dialog never viewed; no "apply immediately" switch (preview is always live) |
 | Invert Black and White | ✅ | T | |
-| Substitute Colors | 🟡 | T S | Replace/swap, tolerance, open/save list. Single-selection only (no Ctrl multi-select); no Revert button (use Undo) |
+| Substitute Colors | ✅ | T S | Replace/swap, tolerance, open/save list, Ctrl/Shift multi-select with bulk edit, Apply and Revert (checked with real clicks: Apply → Revert → Apply → Cancel undoes it) |
 | Unique Colors | ✅ | T | Counting tested; result dialog never viewed |
 
 ## TextSnap
@@ -155,7 +157,7 @@ The original reads text through Windows drawing hooks. HSnap uses **UI Automatio
 | Flood fill | ✅ | T | |
 | Add text | 🟡 | T | One font (Segoe UI/Arial), no font dialog, no rich formatting, no "update immediately" option |
 | Air brush, Eraser, Freehand, Line | ✅ | C | Never drawn with a real mouse |
-| Arrow | 🟡 | C | No hollow/filled/architectural heads, no head length/width settings |
+| Arrow | ✅ | T S | Hollow, filled and architectural heads, length/width, head at end or start. Filled and architectural drawn with a real mouse; hollow checked by test |
 | Rectangle, rounded rect, ellipse (+ filled), Shift = circle | ✅ | T C | Rendering tested; mouse drawing never done |
 | Foreground / background colour | 🟡 | C | System colour picker; no 40-colour floating palette, no eyedropper |
 | Tool width, eraser width | 🟡 | C | No line-style list or "Smooth lines" switch |
@@ -163,7 +165,7 @@ The original reads text through Windows drawing hooks. HSnap uses **UI Automatio
 | Print Direct | ✅ | C | Prints to the default printer — untested on purpose |
 | Help ("What is this?") cursor | ❌ | – | |
 | Status bar, image view area | ✅ | S | |
-| Apply / Revert / Cancel / OK buttons | 🟡 | – | OK/Cancel/Apply exist where relevant; Revert is Undo |
+| Apply / Revert / Cancel / OK buttons | ✅ | S | All Image/Color filter dialogs have OK, Apply, Revert and Cancel (Cancel also undoes earlier Applies) |
 
 ## Other manual topics
 
@@ -179,14 +181,14 @@ The original reads text through Windows drawing hooks. HSnap uses **UI Automatio
 
 Everything marked **C**, plus these gaps in the rows marked T/S:
 
-1. **Drawing with the mouse**: pencil, line, arrow, rectangle, ellipse, text, air brush, eraser, flood fill, selection, Magnify, view-only panning, Shift-for-circle, and the shadow on a freshly drawn shape.
+1. **Drawing with the mouse**: pencil, line, hollow arrow, rectangle, ellipse, text, air brush, eraser, flood fill, selection, Magnify, view-only panning, Shift-for-circle, and the shadow on a freshly drawn shape. (Filled/architectural arrows and stamp objects were done with a real mouse.)
 2. **Real hot keys**: pressing Ctrl+Shift+R/W/M/S/T/U/F and Shift+F11. Registration is verified, key presses were not (Ctrl+Shift+S and W were already taken by another program earlier on this machine).
-3. **Capture menu / toolbar buttons** for Full Screen, Window, Active, Repeat, Cursor, Auto-capture, and the capture modes' GUI paths (Window or Control hover highlight, scrolling-page click, active window without frame).
+3. **Capture menu / toolbar buttons** for Full Screen, Window, Active, Repeat, Cursor, Auto-capture, and the capture modes' GUI paths (scrolling-page click, active window without frame, the Button frozen-screen picker). Full Screen through a start-up hook, Window or Control through the overlay, and Button live through the command line were checked.
 4. **File dialogs**: New, Open, Save (PNG/JPEG/BMP/GIF through the UI), recent files, Set as Wallpaper, Full Screen view, tab switching, zoom box.
 5. **Clipboard**: Cut/Copy/Paste/Paste as New Image, auto-copy.
 6. **QuickSave** and **auto-print / print dialog** through the GUI; printing on a **physical printer**; Print Direct.
-7. **Stamps manager**: list, preview, insert on an open image, delete (Recycle Bin), auto-add on capture.
-8. **Filter dialogs never viewed**: Shear, Mosaic, Emboss, Sharpen/Blur, Color Resolution, Halftone, Color Correction, Unique Colors; and clicking OK to apply any filter on a selection.
+7. **Stamps manager**: list, preview, insert on an open image, delete (Recycle Bin), auto-add on capture. (Moving, resizing and editing an inserted stamp object were checked.)
+8. **Filter dialogs never viewed**: Shear, Mosaic, Emboss, Sharpen/Blur, Color Resolution, Halftone, Color Correction, Unique Colors; and clicking OK to apply any filter on a selection (Apply/Revert/Cancel were checked on Substitute Colors only).
 9. **Scale, Cut out strip, Crop** applied through the menu.
 10. **TextSnap**: pointer-based Text from an Object under Cursor; the two auto-scroll text modes; Chinese text; tab-delimited mode on a real table.
 11. **System tray menu** capture items and **auto-start for all users**.

@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app;
+mod autoprocess;
 mod dialogs;
 mod icons;
 mod capture;
@@ -127,6 +128,17 @@ fn main() {
                 Ok(t) => println!("---
 {t}
 ---"),
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        // hsnap --cli-button <x> <y> <left> <top> <right> <bottom> <out.png>: the control under (x, y), live
+        Some("--cli-button") if args.len() >= 8 => {
+            let n = |i: usize| args[i].parse::<i32>().unwrap_or(0);
+            match capture::capture_control_at((n(1), n(2)), [n(3), n(4), n(5), n(6)], false).and_then(|(img, r)| img.save(&args[7]).map(|_| r).map_err(|e| e.to_string())) {
+                Ok(r) => println!("control {}x{} at {},{} -> {}", r.w, r.h, r.x, r.y, args[7]),
                 Err(e) => {
                     eprintln!("error: {e}");
                     std::process::exit(1);
