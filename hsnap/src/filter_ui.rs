@@ -59,21 +59,26 @@ pub struct FilterDialog {
     preview_src: RgbaImage,
     tex: Option<(String, egui::TextureHandle)>,
     p: Params,
-    subst_sel: Option<usize>,
+    /// Rows selected in the substitution table (Ctrl or Shift for several).
+    subst_sel: Vec<usize>,
+    /// How many times Apply has changed the open image, so Revert and Cancel can undo them.
+    applied: u32,
+    last_applied: Option<String>,
 }
 
 impl FilterDialog {
     pub fn new(kind: Kind, src: RgbaImage, sel: Option<Sel>, bg: [u8; 4], saved: &crate::service::Settings) -> Self {
         // Preview on a 1:1 crop so pixel-sized parameters look the same as in the result.
-        let (w, h) = (src.width().min(360), src.height().min(260));
-        let preview_src = image::imageops::crop_imm(&src, (src.width() - w) / 2, (src.height() - h) / 2, w, h).to_image();
+        let preview_src = preview_crop(&src);
         Self {
             kind,
             sel,
             bg,
             preview_src,
             tex: None,
-            subst_sel: None,
+            subst_sel: vec![],
+            applied: 0,
+            last_applied: None,
             p: Params {
                 shear: (0.0, 0.0),
                 mosaic: (8, true),
@@ -221,15 +226,18 @@ fn controls(ui: &mut egui::Ui, d: &mut FilterDialog) {
 
 fn substitute_controls(ui: &mut egui::Ui, d: &mut FilterDialog) {
     let t = &mut d.p.subst;
-    ui.label("Color replacement table  (> replace,  <> swap)");
+    let sel = &mut d.subst_sel;
+    ui.label("Color replacement table  (> replace,  <> swap).  Ctrl-click or Shift-click selects several rows.");
     egui::ScrollArea::vertical().id_salt("subst").max_height(120.0).show(ui, |ui| {
-        for (i, e) in t.entries.iter().enumerate() {
+        for i in 0..t.entries.len() {
+            let e = t.entries[i].clone();
             ui.horizontal(|ui| {
                 let (r, _) = ui.allocate_exact_size(egui::vec2(16.0, 16.0), egui::Sense::hover());
                 ui.painter().rect_filled(r, 2.0, c32(e.old));
                 let label = format!("{}  ({},{},{}) {} ({},{},{})", i + 1, e.old[0], e.old[1], e.old[2], if e.swap { "<>" } else { ">" }, e.new[0], e.new[1], e.new[2]);
-                if ui.selectable_label(d.subst_sel == Some(i), label).clicked() {
-                    d.subst_sel = Some(i);
+                if ui.selectable_label(sel.contains(&i), label).clicked() {
+                    let m = ui.input(|inp| inp.modifiers);
+                    select_click(sel, i, m.command, m.shift);
                 }
                 let (r, _) = ui.allocate_exact_size(egui::vec2(16.0, 16.0), egui::Sense::hover());
                 ui.painter().rect_filled(r, 2.0, c32(e.new));
@@ -239,22 +247,26 @@ fn substitute_controls(ui: &mut egui::Ui, d: &mut FilterDialog) {
     ui.horizontal(|ui| {
         if ui.button("Add").clicked() {
             t.entries.push(SubstEntry::default());
-            d.subst_sel = Some(t.entries.len() - 1);
+            *sel = vec![t.entries.len() - 1];
         }
-        if ui.add_enabled(d.subst_sel.is_some(), egui::Button::new("Delete")).clicked() {
-            if let Some(i) = d.subst_sel.take().filter(|i| *i < t.entries.len()) {
-                t.entries.remove(i);
+        if ui.add_enabled(!sel.is_empty(), egui::Button::new("Delete")).clicked() {
+            let mut gone = std::mem::take(sel);
+            gone.sort_unstable_by(|a, b| b.cmp(a));
+            for i in gone {
+                if i < t.entries.len() {
+                    t.entries.remove(i);
+                }
             }
         }
         if ui.add_enabled(!t.entries.is_empty(), egui::Button::new("Delete All")).clicked() {
             t.entries.clear();
-            d.subst_sel = None;
+            sel.clear();
         }
         if ui.button("Open List…").clicked() {
             if let Some(p) = rfd::FileDialog::new().add_filter("Color list", &["json"]).pick_file() {
                 if let Some(loaded) = std::fs::read_to_string(p).ok().and_then(|s| serde_json::from_str::<Vec<SubstEntry>>(&s).ok()) {
                     t.entries = loaded;
-                    d.subst_sel = None;
+                    sel.clear();
                 }
             }
         }
@@ -264,28 +276,137 @@ fn substitute_controls(ui: &mut egui::Ui, d: &mut FilterDialog) {
             }
         }
     });
-    if let Some(e) = d.subst_sel.and_then(|i| t.entries.get_mut(i)) {
+    sel.retain(|i| *i < t.entries.len());
+    if let Some(&first) = sel.first() {
         ui.separator();
-        rgb_edit(ui, "Old color", &mut e.old);
-        rgb_edit(ui, "New color", &mut e.new);
+        if sel.len() > 1 {
+            ui.label(format!("{} rows selected: changes below apply to all of them.", sel.len()));
+        }
+        let before = t.entries[first].clone();
+        let mut edit = before.clone();
+        rgb_edit(ui, "Old color", &mut edit.old);
+        rgb_edit(ui, "New color", &mut edit.new);
         ui.horizontal(|ui| {
-            ui.radio_value(&mut e.swap, false, "Replace  >");
-            ui.radio_value(&mut e.swap, true, "Swap  <>");
+            ui.radio_value(&mut edit.swap, false, "Replace  >");
+            ui.radio_value(&mut edit.swap, true, "Swap  <>");
         });
+        propagate_edit(&mut t.entries, sel, &before, &edit);
     }
     ui.add(egui::Slider::new(&mut t.tolerance, 0.0..=50.0).text("Color matching tolerance (%)"));
     ui.checkbox(&mut t.auto_apply, "Automatically apply to all captured images");
 }
 
+/// Row selection in the substitution table: plain click selects one row, Ctrl toggles a row,
+/// Shift selects the range from the last selected row.
+fn select_click(sel: &mut Vec<usize>, i: usize, ctrl: bool, shift: bool) {
+    if ctrl {
+        match sel.iter().position(|s| *s == i) {
+            Some(p) => {
+                sel.remove(p);
+            }
+            None => sel.push(i),
+        }
+    } else if shift {
+        let from = sel.last().copied().unwrap_or(i);
+        *sel = (from.min(i)..=from.max(i)).collect();
+    } else {
+        *sel = vec![i];
+    }
+}
+
+/// The user edited the first selected row from `before` to `edit`; copy only the fields they changed
+/// to every selected row.
+fn propagate_edit(entries: &mut [SubstEntry], sel: &[usize], before: &SubstEntry, edit: &SubstEntry) {
+    for &i in sel {
+        let Some(row) = entries.get_mut(i) else { continue };
+        if edit.old != before.old {
+            row.old = edit.old;
+        }
+        if edit.new != before.new {
+            row.new = edit.new;
+        }
+        if edit.swap != before.swap {
+            row.swap = edit.swap;
+        }
+    }
+}
+
+/// A centred 1:1 crop used for the live preview.
+fn preview_crop(src: &RgbaImage) -> RgbaImage {
+    let (w, h) = (src.width().min(360), src.height().min(260));
+    image::imageops::crop_imm(src, (src.width() - w) / 2, (src.height() - h) / 2, w, h).to_image()
+}
+
+/// Everything that changes the result, as a string: used to cache the preview and to know whether
+/// the current settings were already applied.
+fn params_key(d: &FilterDialog) -> String {
+    format!(
+        "{:?}{}{}{}{}{}{}{}{}{}{}{}{}{}",
+        d.kind,
+        d.p.shear.0,
+        d.p.shear.1,
+        d.p.mosaic.0,
+        d.p.emboss.0,
+        d.p.sharp,
+        d.p.halftone,
+        serde_json::to_string(&d.p.shadow).unwrap_or_default(),
+        serde_json::to_string(&d.p.frame).unwrap_or_default(),
+        serde_json::to_string(&d.p.colorres).unwrap_or_default(),
+        serde_json::to_string(&(&d.p.correct, &d.p.subst)).unwrap_or_default(),
+        d.p.mosaic.1,
+        d.p.emboss.1,
+        d.p.apply_now
+    )
+}
+
+/// Apply the dialog's settings to the open image (one undo step) and remember the parameters that persist.
+fn apply_now(app: &mut App, d: &mut FilterDialog) {
+    let sel = match d.kind {
+        Kind::Shadow | Kind::Frame if !d.p.apply_now => None,
+        _ => d.sel,
+    };
+    let (kind, p, bg) = (d.kind, d.p.clone(), d.bg);
+    let before = app.docs.get(app.current).map(|doc| doc.image().dimensions());
+    app.edit(|doc| doc.transform(|img| run(kind, &p, &img, sel, bg)));
+    d.applied += 1;
+    d.last_applied = Some(params_key(d));
+    let mut s = app.settings();
+    s.shadow = p.shadow;
+    s.frame = p.frame;
+    s.subst = p.subst;
+    app.apply_settings_quiet(s);
+    // The preview now starts from the changed image.
+    if let Some(doc) = app.docs.get(app.current) {
+        let img = doc.flatten();
+        if Some(img.dimensions()) != before {
+            d.sel = None; // the canvas changed size, so the old selection no longer means anything
+        }
+        d.preview_src = preview_crop(&img);
+        d.tex = None;
+    }
+}
+
+/// Undo everything Apply did while the dialog was open.
+fn revert_applied(app: &mut App, d: &mut FilterDialog) {
+    for _ in 0..d.applied {
+        app.edit(|doc| doc.undo());
+    }
+    d.applied = 0;
+    d.last_applied = None;
+    if let Some(doc) = app.docs.get(app.current) {
+        d.preview_src = preview_crop(&doc.flatten());
+        d.tex = None;
+    }
+}
+
 pub fn show(app: &mut App, ctx: &egui::Context, d: &mut FilterDialog) -> bool {
     let mut open = true;
-    let (mut ok, mut cancel) = (false, false);
+    let (mut ok, mut cancel, mut apply, mut revert) = (false, false, false, false);
     egui::Window::new(d.kind.title()).open(&mut open).collapsible(false).default_width(460.0).show(ctx, |ui| {
         controls(ui, d);
         ui.separator();
         // Live preview of the effect on a 1:1 crop of the image.
-        let key = format!("{:?}{}{}{}{}{}{}{}{}{}{}", d.kind, d.p.shear.0, d.p.shear.1, d.p.mosaic.0, d.p.emboss.0, d.p.sharp, d.p.halftone, serde_json::to_string(&d.p.shadow).unwrap_or_default(), serde_json::to_string(&d.p.frame).unwrap_or_default(), serde_json::to_string(&d.p.colorres).unwrap_or_default(), serde_json::to_string(&(&d.p.correct, &d.p.subst)).unwrap_or_default())
-            + &format!("{}{}{}", d.p.mosaic.1, d.p.emboss.1, d.p.apply_now);
+        let key = params_key(d);
         if d.tex.as_ref().is_none_or(|(k, _)| *k != key) {
             let out = run(d.kind, &d.p, &d.preview_src, None, d.bg);
             let ci = egui::ColorImage::from_rgba_unmultiplied([out.width() as usize, out.height() as usize], out.as_raw());
@@ -299,24 +420,26 @@ pub fn show(app: &mut App, ctx: &egui::Context, d: &mut FilterDialog) -> bool {
         ui.separator();
         ui.horizontal(|ui| {
             ok = ui.button("OK").clicked();
+            apply = ui.button("Apply").on_hover_text("Apply to the image and keep this window open").clicked();
+            revert = ui.add_enabled(d.applied > 0, egui::Button::new("Revert")).on_hover_text("Undo what Apply did").clicked();
             cancel = ui.button("Cancel").clicked();
         });
     });
-    if ok {
-        let sel = match d.kind {
-            Kind::Shadow | Kind::Frame if !d.p.apply_now => None,
-            _ => d.sel,
-        };
-        let (kind, p, bg) = (d.kind, d.p.clone(), d.bg);
-        app.edit(|doc| doc.transform(|img| run(kind, &p, &img, sel, bg)));
-        // Remember the parameters that persist (auto-add options included).
-        let mut s = app.settings();
-        s.shadow = p.shadow;
-        s.frame = p.frame;
-        s.subst = p.subst;
-        app.apply_settings_quiet(s);
+    // Settings that were already applied are not applied a second time.
+    if (ok || apply) && d.last_applied.as_deref() != Some(params_key(d).as_str()) {
+        apply_now(app, d);
     }
-    open && !ok && !cancel
+    if revert {
+        revert_applied(app, d);
+    }
+    if ok {
+        return false;
+    }
+    if cancel || !open {
+        revert_applied(app, d); // Cancel really cancels, including earlier Applies
+        return false;
+    }
+    true
 }
 
 /// Apply the filters the user set to run on every capture (auto-add shadow, frame, substitution).
@@ -332,4 +455,49 @@ pub fn auto_filters(img: RgbaImage, s: &crate::service::Settings) -> RgbaImage {
         img = frame(&img, None, &s.frame);
     }
     img
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(old: u8, new: u8, swap: bool) -> SubstEntry {
+        SubstEntry { old: [old; 3], new: [new; 3], swap }
+    }
+
+    #[test]
+    fn click_ctrl_and_shift_select_rows() {
+        let mut sel = vec![];
+        select_click(&mut sel, 2, false, false);
+        assert_eq!(sel, [2]);
+        select_click(&mut sel, 5, true, false); // Ctrl adds
+        assert_eq!(sel, [2, 5]);
+        select_click(&mut sel, 2, true, false); // Ctrl again removes
+        assert_eq!(sel, [5]);
+        select_click(&mut sel, 8, false, true); // Shift: range from the last selected
+        assert_eq!(sel, [5, 6, 7, 8]);
+        select_click(&mut sel, 1, false, false); // plain click resets
+        assert_eq!(sel, [1]);
+    }
+
+    #[test]
+    fn editing_one_row_changes_only_the_edited_fields_of_all_selected_rows() {
+        let mut rows = vec![entry(1, 10, false), entry(2, 20, false), entry(3, 30, false)];
+        let before = rows[0].clone();
+        let mut edit = before.clone();
+        edit.new = [99; 3]; // set the same new colour for the selected rows
+        propagate_edit(&mut rows, &[0, 2], &before, &edit);
+        assert_eq!(rows[0].new, [99; 3]);
+        assert_eq!(rows[2].new, [99; 3]);
+        assert_eq!(rows[2].old, [3; 3]); // untouched fields keep their own values
+        assert_eq!(rows[1].new, [20; 3]); // unselected row unchanged
+        // Switch two rows from Replace to Swap at once.
+        let before = rows[0].clone();
+        let mut edit = before.clone();
+        edit.swap = true;
+        propagate_edit(&mut rows, &[0, 1], &before, &edit);
+        assert!(rows[0].swap && rows[1].swap && !rows[2].swap);
+        // Stale indices are ignored.
+        propagate_edit(&mut rows, &[7], &before, &edit);
+    }
 }
