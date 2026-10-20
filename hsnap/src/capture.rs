@@ -67,37 +67,65 @@ pub fn monitor_under_cursor() -> Rect {
     }
 }
 
-/// Visible, non-minimised top-level windows in z-order (front first).
-pub fn visible_windows() -> Vec<Rect> {
-    unsafe extern "system" fn cb(hwnd: HWND, lp: LPARAM) -> BOOL {
+/// A top-level window and the visible controls inside it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct WindowEntry {
+    pub rect: Rect,
+    pub children: Vec<Rect>,
+}
+
+/// Visible, non-minimised top-level windows in z-order (front first), each with its child windows.
+pub fn visible_windows() -> Vec<WindowEntry> {
+    unsafe extern "system" fn child_cb(hwnd: HWND, lp: LPARAM) -> BOOL {
         let out = unsafe { &mut *(lp.0 as *mut Vec<Rect>) };
+        let mut r = RECT::default();
+        unsafe {
+            if IsWindowVisible(hwnd).as_bool() && GetWindowRect(hwnd, &mut r).is_ok() && r.right > r.left && r.bottom > r.top {
+                out.push(Rect { x: r.left, y: r.top, w: r.right - r.left, h: r.bottom - r.top });
+            }
+        }
+        TRUE
+    }
+    unsafe extern "system" fn cb(hwnd: HWND, lp: LPARAM) -> BOOL {
+        let out = unsafe { &mut *(lp.0 as *mut Vec<WindowEntry>) };
         unsafe {
             if !IsWindowVisible(hwnd).as_bool() || IsIconic(hwnd).as_bool() {
                 return TRUE;
             }
             let mut cloaked = 0u32;
-            let _ = DwmGetWindowAttribute(
-                hwnd,
-                DWMWA_CLOAKED,
-                &mut cloaked as *mut _ as *mut c_void,
-                size_of::<u32>() as u32,
-            );
+            let _ = DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &mut cloaked as *mut _ as *mut c_void, size_of::<u32>() as u32);
             if cloaked != 0 {
                 return TRUE;
             }
         }
         if let Some(r) = window_rect(hwnd) {
             if r.w > 0 && r.h > 0 {
-                out.push(r);
+                let mut children: Vec<Rect> = Vec::new();
+                unsafe {
+                    let _ = EnumChildWindows(Some(hwnd), Some(child_cb), LPARAM(&mut children as *mut _ as isize));
+                }
+                out.push(WindowEntry { rect: r, children });
             }
         }
         TRUE
     }
-    let mut v: Vec<Rect> = Vec::new();
+    let mut v: Vec<WindowEntry> = Vec::new();
     unsafe {
         let _ = EnumWindows(Some(cb), LPARAM(&mut v as *mut _ as isize));
     }
     v
+}
+
+/// What the pointer is over: the front-most window containing it, or (with `children`) the
+/// smallest control of that window containing it.
+pub fn target_at(windows: &[WindowEntry], x: i32, y: i32, children: bool) -> Option<Rect> {
+    let top = windows.iter().find(|w| w.rect.contains(x, y))?;
+    if children {
+        if let Some(c) = top.children.iter().filter(|c| c.contains(x, y)).min_by_key(|c| c.w as i64 * c.h as i64) {
+            return Some(*c);
+        }
+    }
+    Some(top.rect)
 }
 
 fn window_rect(hwnd: HWND) -> Option<Rect> {
@@ -237,4 +265,41 @@ pub fn capture_active_client(include_cursor: bool) -> Result<RgbaImage, String> 
         }
     }
     capture_rect(Rect { x: origin.x, y: origin.y, w: rc.right - rc.left, h: rc.bottom - rc.top }, include_cursor)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn r(x: i32, y: i32, w: i32, h: i32) -> Rect {
+        Rect { x, y, w, h }
+    }
+
+    fn windows() -> Vec<WindowEntry> {
+        vec![
+            WindowEntry { rect: r(0, 0, 100, 100), children: vec![r(10, 10, 30, 30), r(20, 20, 5, 5)] },
+            WindowEntry { rect: r(50, 50, 100, 100), children: vec![r(60, 60, 20, 20)] },
+        ]
+    }
+
+    #[test]
+    fn picks_the_smallest_control_under_the_pointer() {
+        let w = windows();
+        assert_eq!(target_at(&w, 22, 22, true), Some(r(20, 20, 5, 5)));
+        assert_eq!(target_at(&w, 12, 12, true), Some(r(10, 10, 30, 30)));
+    }
+
+    #[test]
+    fn falls_back_to_the_window_and_respects_z_order() {
+        let w = windows();
+        assert_eq!(target_at(&w, 80, 80, true), Some(r(0, 0, 100, 100))); // front window wins in the overlap
+        assert_eq!(target_at(&w, 120, 120, true), Some(r(50, 50, 100, 100)));
+        assert_eq!(target_at(&w, 70, 70, true), Some(r(0, 0, 100, 100))); // child of the rear window is hidden
+        assert_eq!(target_at(&w, 500, 500, true), None);
+    }
+
+    #[test]
+    fn controls_can_be_ignored() {
+        assert_eq!(target_at(&windows(), 22, 22, false), Some(r(0, 0, 100, 100)));
+    }
 }

@@ -107,7 +107,7 @@ struct Picker {
     shot: RgbaImage,
     origin: (i32, i32),
     tex: Option<egui::TextureHandle>,
-    windows: Vec<Rect>,
+    windows: Vec<capture::WindowEntry>,
     drag_start: Option<(i32, i32)>,
     click_start: Option<(i32, i32)>,
     path: Vec<(i32, i32)>,
@@ -181,7 +181,7 @@ impl Picker {
     fn hint(&self) -> &'static str {
         match self.p.mode {
             Mode::Region => "Drag, or click twice, to select a region. Esc / right-click cancels.",
-            Mode::Window => "Click a window to capture it. Esc / right-click cancels.",
+            Mode::Window => "Click a window or control to capture it. Esc / right-click cancels.",
             Mode::FreeHand => "Draw around the area. Enter, right-click, or clicking near the start finishes. Esc cancels.",
             Mode::Multi => "Drag regions (or click windows). Right-click switches region/window, Backspace removes the last, Enter finishes, Esc cancels.",
             Mode::Pan => "Move the box and click to capture a region of the previous size. Esc / right-click cancels.",
@@ -285,7 +285,8 @@ impl eframe::App for PickerApp {
             let press = ctx.input(|i| i.pointer.press_origin()).map(to_px);
             let (ox, oy) = p.origin;
 
-            let window_at = |p: &Picker, hx: i32, hy: i32| p.windows.iter().find(|w| w.contains(hx + ox, hy + oy)).map(|w| Rect { x: w.x - ox, y: w.y - oy, w: w.w, h: w.h });
+            // The innermost control under the pointer, so single buttons and panes can be picked.
+            let window_at = |p: &Picker, hx: i32, hy: i32| capture::target_at(&p.windows, hx + ox, hy + oy, true).map(|w| Rect { x: w.x - ox, y: w.y - oy, w: w.w, h: w.h });
 
             match p.p.mode {
                 Mode::Region | Mode::Multi if !(p.p.mode == Mode::Multi && p.multi_window) => {
