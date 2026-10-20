@@ -1333,6 +1333,10 @@ impl App {
 
         egui::ScrollArea::both().drag_to_scroll(view_only).show(ui, |ui| {
             let (rect, resp) = ui.allocate_exact_size(size, Sense::click_and_drag());
+            // The canvas itself senses drags (for the drawing tools), so the scroll area never sees them: pan by hand.
+            if view_only && resp.dragged() {
+                ui.scroll_with_delta(resp.drag_delta());
+            }
             ui.painter().image(tex.id(), rect, egui::Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE);
             let to_img = |p: Pos2| -> Pt { ((p.x - rect.min.x) * ppp / zoom, (p.y - rect.min.y) * ppp / zoom) };
             let to_ui = |p: Pt| Pos2::new(rect.min.x + p.0 * zoom / ppp, rect.min.y + p.1 * zoom / ppp);
