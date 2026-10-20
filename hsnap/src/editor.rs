@@ -10,7 +10,7 @@ pub type Pt = (f32, f32);
 pub enum Kind {
     Pencil(Vec<Pt>),
     Line(Pt, Pt),
-    Arrow(Pt, Pt),
+    Arrow(Pt, Pt, ArrowStyle),
     Rect(Pt, Pt),
     RoundRect(Pt, Pt),
     Ellipse(Pt, Pt),
@@ -49,6 +49,69 @@ pub struct Shape {
     pub color: [u8; 4],
     pub width: f32,
     pub shadow: Option<ShapeShadow>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum HeadStyle {
+    /// Two open strokes forming a V.
+    #[default]
+    Hollow,
+    Filled,
+    /// A short slanted tick across the line end, as on architectural drawings.
+    Architectural,
+}
+
+impl HeadStyle {
+    pub const ALL: [HeadStyle; 3] = [HeadStyle::Hollow, HeadStyle::Filled, HeadStyle::Architectural];
+    pub fn label(self) -> &'static str {
+        match self {
+            HeadStyle::Hollow => "Hollow",
+            HeadStyle::Filled => "Filled",
+            HeadStyle::Architectural => "Architectural",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ArrowStyle {
+    pub head: HeadStyle,
+    /// Arrowhead length and width in pixels.
+    pub length: f32,
+    pub width: f32,
+    /// Head at the end point of the drag (otherwise at the start).
+    pub at_end: bool,
+}
+
+impl Default for ArrowStyle {
+    fn default() -> Self {
+        Self { head: HeadStyle::Hollow, length: 16.0, width: 12.0, at_end: true }
+    }
+}
+
+/// Geometry of an arrowhead on the line `a`-`b`: (tip, centre of the head's base, the two wing points).
+pub fn arrow_head(a: Pt, b: Pt, st: &ArrowStyle) -> (Pt, Pt, Pt, Pt) {
+    let (tip, tail) = if st.at_end { (b, a) } else { (a, b) };
+    let (dx, dy) = (tip.0 - tail.0, tip.1 - tail.1);
+    let len = (dx * dx + dy * dy).sqrt().max(0.001);
+    let (ux, uy) = (dx / len, dy / len);
+    let (nx, ny) = (-uy, ux);
+    let base = (tip.0 - ux * st.length, tip.1 - uy * st.length);
+    (tip, base, (base.0 + nx * st.width / 2.0, base.1 + ny * st.width / 2.0), (base.0 - nx * st.width / 2.0, base.1 - ny * st.width / 2.0))
+}
+
+fn fill_triangle(img: &mut RgbaImage, p: [Pt; 3], c: Rgba<u8>) {
+    let (min_x, max_x) = (p.iter().map(|q| q.0).fold(f32::MAX, f32::min).floor() as i32, p.iter().map(|q| q.0).fold(f32::MIN, f32::max).ceil() as i32);
+    let (min_y, max_y) = (p.iter().map(|q| q.1).fold(f32::MAX, f32::min).floor() as i32, p.iter().map(|q| q.1).fold(f32::MIN, f32::max).ceil() as i32);
+    let edge = |a: Pt, b: Pt, x: f32, y: f32| (b.0 - a.0) * (y - a.1) - (b.1 - a.1) * (x - a.0);
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let (fx, fy) = (x as f32 + 0.5, y as f32 + 0.5);
+            let (e0, e1, e2) = (edge(p[0], p[1], fx, fy), edge(p[1], p[2], fx, fy), edge(p[2], p[0], fx, fy));
+            if (e0 >= 0.0 && e1 >= 0.0 && e2 >= 0.0) || (e0 <= 0.0 && e1 <= 0.0 && e2 <= 0.0) {
+                put(img, x, y, c);
+            }
+        }
+    }
 }
 
 /// Drop shadow cast by a drawn shape.
@@ -274,13 +337,31 @@ fn draw_shape(img: &mut RgbaImage, s: &Shape) {
             }
         }
         Kind::Line(a, b) => line(img, *a, *b, s.width, c),
-        Kind::Arrow(a, b) => {
-            line(img, *a, *b, s.width, c);
-            let ang = (a.1 - b.1).atan2(a.0 - b.0);
-            let len = (s.width * 4.0).max(12.0);
-            for da in [0.5f32, -0.5] {
-                let t = (b.0 + len * (ang + da).cos(), b.1 + len * (ang + da).sin());
-                line(img, *b, t, s.width, c);
+        Kind::Arrow(a, b, st) => {
+            let (tip, base, w1, w2) = arrow_head(*a, *b, st);
+            let tail = if st.at_end { *a } else { *b };
+            match st.head {
+                HeadStyle::Hollow => {
+                    line(img, tail, tip, s.width, c);
+                    line(img, tip, w1, s.width, c);
+                    line(img, tip, w2, s.width, c);
+                }
+                HeadStyle::Filled => {
+                    line(img, tail, base, s.width, c); // the shaft stops at the head so a thick line does not poke through the tip
+                    fill_triangle(img, [tip, w1, w2], c);
+                }
+                HeadStyle::Architectural => {
+                    line(img, tail, tip, s.width, c);
+                    // Tick across the end, slanted 45 degrees to the line.
+                    let (ux, uy) = ((tip.0 - tail.0), (tip.1 - tail.1));
+                    let l = (ux * ux + uy * uy).sqrt().max(0.001);
+                    let (ux, uy) = (ux / l, uy / l);
+                    let (nx, ny) = (-uy, ux);
+                    let half = st.width / 2.0;
+                    let (sx, sy) = (nx - ux, ny - uy);
+                    let k = half / (sx * sx + sy * sy).sqrt();
+                    line(img, (tip.0 + sx * k, tip.1 + sy * k), (tip.0 - sx * k, tip.1 - sy * k), s.width, c);
+                }
             }
         }
         Kind::Rect(a, b) => {
@@ -702,6 +783,43 @@ mod tests {
         assert!(d.shapes().is_empty());
         d.undo();
         assert_eq!(d.shapes().len(), 1);
+    }
+
+    #[test]
+    fn arrow_heads_have_the_chosen_style_and_end() {
+        let blank = || Document::new("t", RgbaImage::from_pixel(80, 40, Rgba([255, 255, 255, 255])));
+        let ink = [0, 0, 0, 255];
+        let make = |head, at_end| {
+            let mut d = blank();
+            let st = ArrowStyle { head, length: 14.0, width: 12.0, at_end };
+            d.add_shape(Shape { kind: Kind::Arrow((10., 20.), (70., 20.), st), color: ink, width: 1.0, shadow: None });
+            d.flatten()
+        };
+        // Filled: the area just behind the tip, off the shaft, is solid; hollow leaves it empty.
+        let filled = make(HeadStyle::Filled, true);
+        let hollow = make(HeadStyle::Hollow, true);
+        assert_eq!(filled.get_pixel(62, 22), &Rgba(ink));
+        assert_eq!(hollow.get_pixel(62, 22), &Rgba([255, 255, 255, 255]));
+        // The hollow head still has its strokes: a wing pixel at the far end of a stroke.
+        assert_eq!(hollow.get_pixel(56, 14), &Rgba(ink));
+        // Architectural: a tick through the end, no triangle.
+        let arch = make(HeadStyle::Architectural, true);
+        assert_eq!(arch.get_pixel(70, 20), &Rgba(ink));
+        assert_eq!(arch.get_pixel(62, 22), &Rgba([255, 255, 255, 255]));
+        assert_eq!(arch.get_pixel(74, 16), &Rgba(ink)); // the tick extends past the shaft
+        // Head at the start instead of the end.
+        let at_start = make(HeadStyle::Filled, false);
+        assert_eq!(at_start.get_pixel(18, 22), &Rgba(ink));
+        assert_eq!(at_start.get_pixel(62, 22), &Rgba([255, 255, 255, 255]));
+    }
+
+    #[test]
+    fn arrow_head_geometry() {
+        let st = ArrowStyle { head: HeadStyle::Filled, length: 10.0, width: 8.0, at_end: true };
+        let (tip, base, w1, w2) = arrow_head((0.0, 0.0), (100.0, 0.0), &st);
+        assert_eq!(tip, (100.0, 0.0));
+        assert_eq!(base, (90.0, 0.0));
+        assert!((w1.1 - w2.1).abs() > 7.9 && (w1.0 - 90.0).abs() < 0.01);
     }
 
     #[test]

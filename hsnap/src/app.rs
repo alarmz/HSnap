@@ -130,6 +130,7 @@ pub struct App {
     tray: Option<crate::tray::Tray>,
     quitting: Arc<AtomicBool>,
     first_frame: bool,
+    arrow_style: editor::ArrowStyle,
     pub text_buffer: String,
 }
 
@@ -178,6 +179,7 @@ impl App {
             tray: None,
             quitting: Arc::new(AtomicBool::new(false)),
             first_frame: true,
+            arrow_style: editor::ArrowStyle::default(),
             text_buffer: String::new(),
         }
     }
@@ -643,6 +645,20 @@ impl eframe::App for App {
             // Developer hook: open a dialog on start-up (used for visual checks).
             match std::env::var("HSNAP_DIALOG").as_deref() {
                 Ok("pagesetup") => self.open_page_setup(),
+                Ok(k) if k.starts_with("arrow:") => {
+                    let img = image::RgbaImage::from_pixel(400, 300, image::Rgba([240, 240, 240, 255]));
+                    self.new_document(img, "synthetic".into());
+                    self.tool = Tool::Arrow;
+                    self.fg = Color32::from_rgb(200, 30, 30);
+                    self.width = 4.0;
+                    self.arrow_style.head = match &k[6..] {
+                        "filled" => editor::HeadStyle::Filled,
+                        "arch" => editor::HeadStyle::Architectural,
+                        _ => editor::HeadStyle::Hollow,
+                    };
+                    self.arrow_style.length = 26.0;
+                    self.arrow_style.width = 20.0;
+                }
                 Ok("stampobj") => {
                     let img = image::RgbaImage::from_fn(400, 300, |x, y| image::Rgba([(x * 255 / 400) as u8, (y * 255 / 300) as u8, 120, 255]));
                     self.new_document(img, "synthetic".into());
@@ -1177,6 +1193,18 @@ impl App {
         });
         ui.add(egui::DragValue::new(&mut self.width).range(1.0..=40.0).prefix("W ")).on_hover_text("Tool width");
         ui.add(egui::DragValue::new(&mut self.eraser_width).range(2.0..=80.0).prefix("E ")).on_hover_text("Eraser width");
+        if self.tool == Tool::Arrow {
+            ui.separator();
+            let st = &mut self.arrow_style;
+            egui::ComboBox::from_id_salt("arrow-head").width(86.0).selected_text(st.head.label()).show_ui(ui, |ui| {
+                for h in editor::HeadStyle::ALL {
+                    ui.selectable_value(&mut st.head, h, h.label());
+                }
+            });
+            ui.add(egui::DragValue::new(&mut st.length).range(4.0..=120.0).prefix("L ")).on_hover_text("Arrowhead length (px)");
+            ui.add(egui::DragValue::new(&mut st.width).range(2.0..=120.0).prefix("W ")).on_hover_text("Arrowhead width (px)");
+            ui.checkbox(&mut st.at_end, "At end").on_hover_text("Place the arrowhead at the end of the line (clear for the start)");
+        }
     }
 
     fn tabs(&mut self, ui: &mut egui::Ui) {
@@ -1460,8 +1488,34 @@ impl App {
                 _ if pts.len() == 2 => {
                     let r = egui::Rect::from_two_pos(pts[0], pts[1]);
                     match tool {
-                        Tool::Line | Tool::Arrow => {
+                        Tool::Line => {
                             painter.line_segment([pts[0], pts[1]], stroke);
+                        }
+                        Tool::Arrow => {
+                            // Same geometry as the finished arrow, in screen space.
+                            let (a, b) = (path[0], path[1]);
+                            let (tip, base, w1, w2) = editor::arrow_head(a, b, &self.arrow_style);
+                            let tail = if self.arrow_style.at_end { a } else { b };
+                            let (tip, base, w1, w2, tail) = (to_ui(tip), to_ui(base), to_ui(w1), to_ui(w2), to_ui(tail));
+                            match self.arrow_style.head {
+                                editor::HeadStyle::Hollow => {
+                                    painter.line_segment([tail, tip], stroke);
+                                    painter.line_segment([tip, w1], stroke);
+                                    painter.line_segment([tip, w2], stroke);
+                                }
+                                editor::HeadStyle::Filled => {
+                                    painter.line_segment([tail, base], stroke);
+                                    painter.add(egui::Shape::convex_polygon(vec![tip, w1, w2], self.fg, Stroke::NONE));
+                                }
+                                editor::HeadStyle::Architectural => {
+                                    painter.line_segment([tail, tip], stroke);
+                                    let d = (tip - tail).normalized();
+                                    let n = egui::vec2(-d.y, d.x);
+                                    let half = self.arrow_style.width * zoom / ppp / 2.0;
+                                    let s = (n - d).normalized() * half;
+                                    painter.line_segment([tip + s, tip - s], stroke);
+                                }
+                            }
                         }
                         Tool::Rect => {
                             painter.rect_stroke(r, 0.0, stroke, egui::StrokeKind::Middle);
@@ -1494,6 +1548,7 @@ impl App {
         if resp.drag_stopped() {
             let Some(path) = self.drag.take() else { return };
             let (c, w) = (self.fg_rgba(), self.width);
+            let arrow = self.arrow_style;
             let shadow = self.new_shape_shadow();
             match (tool, path.as_slice()) {
                 (Tool::Select, [a, b]) => {
@@ -1521,7 +1576,7 @@ impl App {
                     let kind = match (t, p) {
                         (Tool::Freehand, p) if !p.is_empty() => Some(Kind::Pencil(p.to_vec())),
                         (Tool::Line, [a, b]) => Some(Kind::Line(*a, *b)),
-                        (Tool::Arrow, [a, b]) => Some(Kind::Arrow(*a, *b)),
+                        (Tool::Arrow, [a, b]) => Some(Kind::Arrow(*a, *b, arrow)),
                         (Tool::Rect, [a, b]) => Some(Kind::Rect(*a, *b)),
                         (Tool::RoundRect, [a, b]) => Some(Kind::RoundRect(*a, *b)),
                         (Tool::Ellipse, [a, b]) => Some(Kind::Ellipse(*a, *b)),
